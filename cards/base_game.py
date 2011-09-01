@@ -348,3 +348,21 @@ class Witch(Card):
             if p.attack(player, self) and curse_stack.count > 0:
                 p.discard_pile.append(curse_stack.type())
                 curse_stack.count -= 1
+                
+class Library(Card):
+    price = 5
+    type = ACTION
+    name = "Library"
+    def play(self, player):
+        next = True
+        aside = []
+        while len(player.hand) < 7 and next:
+            next_card = player.get_top_card()
+            if next_card:
+                if next_card.type & ACTION == ACTION:
+                    if not player.ask_keep(player, next_card):
+                        aside.append(next_card)
+                        continue
+                player.hand.append(next_card)
+            else:
+                next = False
