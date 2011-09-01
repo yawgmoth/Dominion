@@ -1,0 +1,19 @@
+* Purpose
+This program is an implementation of the card game Dominion by Donald X. Vaccarino.
+
+* Features
+ - Base game cards are all implemented
+ - Slightly awkward command line user interface implemented
+ - Only "no provinces left" is implemented as game end condition
+ - Random selection of kingdom cards
+ - Two-player game
+
+* Todos
+ - Proper game ending (When 3 action stacks are exhausted, too)
+ - More notifications for players (what the opponent is doing)
+ - Better user interface (GUI!)
+ - User interface proxy for playing over network
+ - AI
+ - More card sets
+ - More options: Force inclusion/exclusion of kingdom cards, make preset lists available, ...
+ - More players
