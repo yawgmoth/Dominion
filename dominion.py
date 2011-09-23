@@ -1,8 +1,11 @@
 from player_interface import PlayerInterface
 import random
-
+import sys
+import optparse
 import cards
-
+import threading
+import gtk
+import gobject
 
 class Player:
     def __init__(self, deck, player_interface, name):
@@ -154,6 +157,8 @@ class Player:
             return False
         if disc < 0:
             disc = 0
+        if disc > len(self.hand) -1:
+            disc = len(self.hand) -1
         self.discard_pile.append(self.hand[disc])
         del self.hand[disc]
         return True
@@ -191,7 +196,7 @@ class Player:
         while reactions and which >= 0:
             which = self.player_interface.ask_whichreaction(reactions)
             if which >= 0:
-                result = result and reactions[which].handle_attack()
+                result = result and reactions[which].handle_attack(self.player_interface, attacker)
                 del reactions[which]
         return result
     
@@ -251,11 +256,42 @@ class Game:
     def check_game_end(self):
         return self.stacks[-1].count == 0
 
+def make_start_deck():
+    return [cards.Copper() for i in xrange(7)] + [cards.Estate() for i in xrange(3)]
+    
+def make_player(type, nr):
+    if type == "basic":
+        interface = PlayerInterface("Player %d"%nr)
+    elif type == "ai.random":
+        import ai
+        interface = ai.RandomPlayer("Player %d"%nr)
+    elif type == "gtk":
+        import ui
+        interface = ui.GtkPlayer("Player %d"%nr)
+    return Player(make_start_deck(), interface, "Player %d"%nr)
+
 def main():
-    players = [Player([cards.Copper() for i in xrange(7)] + [cards.Estate() for i in xrange(3)], 
-                      PlayerInterface("Player %d"%j), "Player %d"%j) for j in xrange(2)]
+    parser = optparse.OptionParser()
+    parser.add_option("-1", "--player-1", "--p1", action="store", type="choice", choices=["basic", "ai.random", "gtk"], default="ai.random", dest="player1")
+    parser.add_option("-2", "--player-2", "--p2", action="store", type="choice", choices=["basic", "ai.random", "gtk"], default="ai.random", dest="player2")
+    parser.add_option("-3", "--player-3", "--p3", action="store", type="choice", choices=["basic", "ai.random", "gtk"], default=None, dest="player3")
+    parser.add_option("-4", "--player-4", "--p4", action="store", type="choice", choices=["basic", "ai.random", "gtk"], default=None, dest="player4")
+    (options,args) = parser.parse_args()
+    players = [make_player(options.player1, 1), make_player(options.player2, 2)]
     g = Game(players)
-    g.run()
+    use_gtk = False
+    for p in [options.player1, options.player2]:
+        if p == "gtk":
+            use_gtk = True
+    if use_gtk:
+        import gobject
+        import gtk
+        gobject.threads_init()
+        t = threading.Thread(target=g.run)
+        t.start()
+        gtk.main()
+    else:
+        g.run()
         
 if __name__ == "__main__":
     main()

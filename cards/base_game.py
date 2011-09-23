@@ -76,7 +76,13 @@ class Feast(Card):
         player.discard_pile.append(cards[gain_which].type())
         
     def post_play(self, player):
-        del player.in_play[player.in_play.rindex(self)]
+        i = len(player.in_play)-1
+        while i > 0:
+            if player.in_play[i] == self:
+                break
+            i -= 1
+        if i > 0:
+            del player.in_play[i]
         player.game.trash.append(self)
 
 class Gardens(Card):
@@ -95,7 +101,7 @@ class Moneylender(Card):
         while i < len(player.hand) and player.hand[i].name != "Copper":
             i += 1
         if i < len(player.hand):
-            player.game.trash(player.hand[i])
+            player.game.trash.append(player.hand[i])
             del player.hand[i]
             player.money += 3
 
@@ -171,13 +177,15 @@ class Mine(Card):
         for c in player.hand:
             if c.type & TREASURE == TREASURE:
                 treasures.append(c)
-        disc = self.player_interface.ask_whichtrash(treasures, False)
+        if not treasures:
+            return
+        disc = player.player_interface.ask_whichtrash(treasures, False)
         if disc < 0:
             disc = 0
-        idx = self.hand.index(treasures[disc])
-        c = self.hand[idx]
-        self.game.trash.append(self.hand[idx])
-        del self.hand[idx]
+        idx = player.hand.index(treasures[disc])
+        c = player.hand[idx]
+        player.game.trash.append(player.hand[idx])
+        del player.hand[idx]
         
         max_price = c.price + 3
         cards = []
@@ -268,11 +276,12 @@ class Bureaucrat(Card):
                     if not victory_cards:
                         for c in p.hand:
                             p.reveal_card(c)
-                    which = p.choose_victorycard(victory_cards, self)
-                    p.reveal_card(victory_cards[which])
-                    idx = p.hand.index(victory_cards[which])
-                    p.deck.insert(0, p.hand[idx])
-                    del p.hand[idx]
+                    else:        
+                        which = p.choose_victorycard(victory_cards, self)
+                        p.reveal_card(victory_cards[which])
+                        idx = p.hand.index(victory_cards[which])
+                        p.deck.insert(0, p.hand[idx])
+                        del p.hand[idx]
 
 class Militia(Card):
     price = 4
@@ -314,17 +323,15 @@ class Thief(Card):
                 c2 = p.get_top_card()
                 p.reveal_card(c2)
                 treasures = []
-                if c1.type & TREASURE == TREASURE:
+                if c1 and c1.type & TREASURE == TREASURE:
                     treasures.append(c1)
                 else:
                     p.discard_pile.append(c1)
-                if c2.type & TREASURE == TREASURE:
+                if c2 and c2.type & TREASURE == TREASURE:
                     treasures.append(c2)
                 else:
                     p.discard_pile.append(c2)
                 if treasures:
-                    import pdb
-                    pdb.set_trace()
                     which = player.ask_whichtrash(treasures, True)
                     if which > 0:
                         gain = player.ask_wantgain(treasures[which])
