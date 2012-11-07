@@ -3,7 +3,7 @@ import os
 import cPickle
 
 EXPLORATION_RATE = 1.0
-STRETCH_FACTOR = 0.99
+STRETCH_FACTOR = 1.0
 
 class TotalWinDict:
     def __init__(self):
@@ -13,15 +13,15 @@ class TotalWinDict:
     def initialize(self):
         self.total_orig = self.total
         self.total = dict()
-    def finalize(self, won=False, ptdiff=1):
+    def finalize(self, won, points, totalpoints):
         for k in self.total:
             if k not in self.total_orig:
                 self.total_orig[k] = 0
-            self.total_orig[k] += self.total[k]*ptdiff
+            self.total_orig[k] += self.total[k]*abs(2*points - totalpoints)
             if won:
                 if k not in self.won:
                     self.won[k] = 0
-                self.won[k] += self.total[k]*ptdiff
+                self.won[k] += self.total[k]*abs(totalpoints-2*points)
         self.total = self.total_orig
         self.total_orig = dict()
     def select(self, choices):
@@ -29,7 +29,7 @@ class TotalWinDict:
         for c in choices:
             if c in self.won:
                 wincount = self.won[c]
-                if not wincount:
+                if wincount < 0:
                     wincount = 1
                 perc = wincount*1.0/self.total_orig[c]
                 dev = perc-0.5
@@ -61,8 +61,11 @@ class TotalWinDict:
             wincount = 0
             if k in self.won:
                 wincount = self.won[k]
-            perc = wincount*100.0/self.total[k]
-            lines.append((perc, "\t%s: %.2f%% (%d/%d won)\n"%(k, perc, wincount, self.total[k])))
+            if self.total[k] != 0:
+                perc = wincount*100.0/self.total[k]
+                lines.append((perc, "\t%s: %.2f%% (%d/%d won)\n"%(k, perc, wincount, self.total[k])))
+            else:
+                lines.append((0, "\t%s: %d\n"%(k,wincount*100.0)))
         lines.sort(key=lambda x: -x[0])
         for l in lines:
             result += l[1]
@@ -79,14 +82,14 @@ class GameStats:
         self.discarded = TotalWinDict()
         self.trashed = TotalWinDict()
 
-    def finalize(self, won, ptdiff):
+    def finalize(self, won, points, totalpoints):
         for k in self.bought:
-            self.bought[k].finalize(won, ptdiff)
-        self.played.finalize(won, ptdiff)
+            self.bought[k].finalize(won, points, totalpoints)
+        self.played.finalize(won, points, totalpoints)
         for k in self.decisions:
-            self.decisions[k].finalize(won, ptdiff)
-        self.discarded.finalize(won, ptdiff)
-        self.trashed.finalize(won, ptdiff)
+            self.decisions[k].finalize(won, points, totalpoints)
+        self.discarded.finalize(won, points, totalpoints)
+        self.trashed.finalize(won, points, totalpoints)
         self.count += 1
         if won:
             self.won += 1
@@ -195,6 +198,7 @@ class CountingPlayer:
     def ask_whichbuy(self, options):
         #import pdb
         #pdb.set_trace()
+        self.money = 0
         if self.money not in self.stats.bought:
             self.stats.bought[self.money] = TotalWinDict()
         result = self.stats.bought[self.money].select(["None"] + map(lambda x: x.type.name, options))
@@ -213,6 +217,7 @@ class CountingPlayer:
         for o in options:
             if o.type.price > maxcost:
                 maxcost = o.type.price
+        maxcost = 0
         if maxcost not in self.stats.bought:
             self.stats.bought[maxcost] = TotalWinDict()
         result = self.stats.bought[maxcost].select(["None"] + map(lambda x: x.type.name, options))
@@ -269,9 +274,9 @@ class CountingPlayer:
     def tell_attack(self, attacker, card):
         pass
         
-    def tell_winner(self, winner, ptdiff):
+    def tell_winner(self, winner, points, totalpoints):
         print winner, "has won the game!"
-        self.stats.finalize(winner==self.name, ptdiff)
+        self.stats.finalize(winner==self.name, points, totalpoints)
         f = open(self.name, "w")
         cPickle.dump(self.stats, f)
         f.close()

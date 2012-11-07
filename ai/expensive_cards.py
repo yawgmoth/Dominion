@@ -92,6 +92,7 @@ class ExpensiveCardPlayer:
         return self.ask_which(cards)
         
     def ask_whichtrash(self, cards, optional, *args):
+        if optional: return -1
         return self.ask_which(cards)
         
     def ask_putdiscard(self):

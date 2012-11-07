@@ -227,8 +227,8 @@ class Player:
     def tell_stacks(self, stacks):
         self.player_interface.tell_stacks(stacks)
                 
-    def tell_winner(self, winner, ptdiff):
-        self.player_interface.tell_winner(winner.player_interface.get_name(), ptdiff)
+    def tell_winner(self, winner, *args):
+        self.player_interface.tell_winner(winner.player_interface.get_name(), *args)
         
 class Game:
     def __init__(self, players):
@@ -265,9 +265,11 @@ class Game:
         self.players.sort(key=lambda p: p.points)
         for p in self.players:
             print "%s: %d"%(p.name, p.points)
+            print >> sys.stderr, "%s: %d"%(p.name, p.points)
+        print >> sys.stderr, "%s WON!"%self.players[-1].name
         winner = self.players[-1]
         for p in self.players:
-            p.tell_winner(winner, self.players[-1].points - self.players[-2].points)
+            p.tell_winner(winner, p.points, sum(map(lambda p: p.points, self.players)))
 
     def check_game_end(self):
         return self.stacks[-1].count == 0
