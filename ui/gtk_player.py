@@ -1,6 +1,7 @@
 import gtk
 import gobject
 import threading
+import sys
 
 class GtkPlayer:
     def __init__(self, name):
@@ -55,33 +56,38 @@ class GtkPlayer:
         play_area = gtk.VPaned()
         
         self.stacks = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_INT, gobject.TYPE_INT)
-        self.stacks_view = gtk.TreeView()
+        self.stacks_view = gtk.TreeView(self.stacks)
         cell = gtk.CellRendererText()
         tvcolumn = gtk.TreeViewColumn("Card", cell)
         self.stacks_view.append_column(tvcolumn)
+        tvcolumn.set_attributes(cell, text=0)
         cell = gtk.CellRendererText()
         tvcolumn = gtk.TreeViewColumn("Cost", cell)
         self.stacks_view.append_column(tvcolumn)
+        tvcolumn.set_attributes(cell, text=1)
         cell = gtk.CellRendererText()
         tvcolumn = gtk.TreeViewColumn("Qty", cell)
         self.stacks_view.append_column(tvcolumn)
+        tvcolumn.set_attributes(cell, text=2)
         
         play_area.pack1(self.stacks_view)
         
         bottom_hbox = gtk.HBox()
         
         self.hand = gtk.ListStore(gobject.TYPE_STRING)
-        self.hand_view = gtk.TreeView()
+        self.hand_view = gtk.TreeView(self.hand)
         cell = gtk.CellRendererText()
         tvcolumn = gtk.TreeViewColumn("Card", cell)
         self.hand_view.append_column(tvcolumn)
+        tvcolumn.set_attributes(cell, text=0)
         bottom_hbox.pack_start(self.hand_view)
         
         self.in_play = gtk.ListStore(gobject.TYPE_STRING)
-        self.in_play_view = gtk.TreeView()
+        self.in_play_view = gtk.TreeView(self.in_play)
         cell = gtk.CellRendererText()
         tvcolumn = gtk.TreeViewColumn("Card", cell)
         self.in_play_view.append_column(tvcolumn)
+        tvcolumn.set_attributes(cell, text=0)
         bottom_hbox.pack_start(self.in_play_view)
         
         play_area.pack2(bottom_hbox)
@@ -90,9 +96,15 @@ class GtkPlayer:
 
         window.add(main_container)
         window.show_all()
-
+        window.connect("destroy", self.delete_event)
+        
         self.communication_mutex = threading.Lock()
         self.communication_mutex.acquire()
+    
+    def delete_event(self, event):
+        print "quitting"
+        gobject.idle_add(gtk.main_quit)
+        sys.exit(0)
 
     def set_stacks(self, stacks):
         print "set stacks"
@@ -110,18 +122,21 @@ class GtkPlayer:
 
     def set_hand(self, hand):
         self.hand.clear()
+        print "set hand", hand
         for h in hand:
+            print "set hand", h.name
             self.hand.append((h.name,))
+        self.communication_mutex.release()
 
     def tell_hand(self, hand):
         print "tell hand", hand
         gobject.idle_add(self.set_hand, hand)
+        self.communication_mutex.acquire();
             
     def tell_deck(self, hand):
         pass
         
     def set_stats(self, actions, buys, money):
-        print "set stats"
         self.actions.set_text("Actions: %d"%actions)
         self.buys.set_text("Buys: %d"%buys)
         self.money.set_text("Money: %d"%money)
@@ -129,11 +144,9 @@ class GtkPlayer:
     def tell_stats(self, player):
         print "tell stats"
         gobject.idle_add(self.set_stats, player.actions, player.buys, player.money)
-        
-        
+
     def tell_buyphase(self):
         self.ask_yesno("Want to continue to buyphase?")
-        pass
         
     def tell_reveal(self, player, card):
         # TODO: log
@@ -179,7 +192,9 @@ class GtkPlayer:
         pass
 
     def buy_clicked(self, *args):
-        pass
+        model, iter = self.stacks_view.get_selection().get_selected()
+        self.result = model.get(iter, 0)[0]
+        self.communication_mutex.release()
 
     def discard_clicked(self, *args):
         pass
@@ -196,8 +211,21 @@ class GtkPlayer:
     def ask_whichaction(self, actions):
         return self.ask_which(map(lambda a: a.name, actions), "Which action card do you want to play? (0 to stop playing actions)")
         
+    def whichbuy_setup(self):
+        self.buy.set_sensitive(True)
+    
+    def whichbuy_cleanup(self):
+        self.buy.set_sensitive(False)
+
     def ask_whichbuy(self, options):
-        return self.ask_which(map(lambda a: a.type.name + " ($" + str(a.type.price) + ", " + str(a.count) + " left)", options), "Which card do you want to buy? (0 to stop buying)")
+        choice = ""
+        gobject.idle_add(self.whichbuy_setup)
+        while choice not in map(lambda a: a.type.name, options):
+            self.communication_mutex.acquire()
+            choice = self.result
+            print "got selection:", choice
+        gobject.idle_add(self.whichbuy_cleanup)
+        return map(lambda a: a.type.name, options).index(choice)
         
     def ask_whichgain(self, options):
         return self.ask_which(map(lambda a: a.type.name + " ($" + str(a.type.price) + ", " + str(a.count) + " left)", options), "Which card do you want to gain?")

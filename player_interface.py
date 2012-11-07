@@ -33,7 +33,7 @@ class PlayerInterface:
     def tell_reveal(self, player, card):
         print player.name, "reveals", card.name
     
-    def ask_buy(self):
+    def ask_buy(self, money=0):
         return self.ask_yesno("Do you want to buy something?")
 
     def ask_yesno(self, message):
@@ -69,7 +69,7 @@ class PlayerInterface:
     def ask_whichreaction(self, cards):
         return self.ask_which(map(lambda c: c.name, cards), "Which reaction do you want to use? (0 to stop responding)")
         
-    def ask_whichtrash(self, cards, optional):
+    def ask_whichtrash(self, cards, optional, *args):
         return self.ask_which(map(lambda c: c.name, cards), "Which card do you want to trash?" + (" (0 to not trash anything)" if optional else ""))
         
     def ask_putdiscard(self):
@@ -87,7 +87,7 @@ class PlayerInterface:
     def tell_attack(self, attacker, card):
         print attacker.name, "is attacking you with", card.name
         
-    def tell_winner(self, winner):
+    def tell_winner(self, winner, *args):
         print winner, "has won the game!"
     
     def get_name(self):

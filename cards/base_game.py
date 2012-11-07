@@ -111,19 +111,20 @@ class Remodel(Card):
     name = "Remodel"
     def play(self, player):
         c = player.trash()
-        max_price = c.price + 2
-        cards = []
-        for s in player.game.stacks:
-            if s.count > 0 and s.type.price <= max_price:
-                cards.append(s)
-        if not cards:
-            return
-        gain_which = player.player_interface.ask_whichgain(cards)
-        if gain_which < 0:
-            gain_which = 0
+        if c:
+            max_price = c.price + 2
+            cards = []
+            for s in player.game.stacks:
+                if s.count > 0 and s.type.price <= max_price:
+                    cards.append(s)
+            if not cards:
+                return
+            gain_which = player.player_interface.ask_whichgain(cards)
+            if gain_which < 0:
+                gain_which = 0
 
-        cards[gain_which].count -= 1
-        player.discard_pile.append(cards[gain_which].type())
+            cards[gain_which].count -= 1
+            player.discard_pile.append(cards[gain_which].type())
         
 class ThroneRoom(Card):
     price = 4

@@ -1,6 +1,6 @@
 import random
 
-class RandomPlayer:
+class ExpensiveCardPlayer:
     def __init__(self, name):
         self.name = name
         
@@ -54,26 +54,38 @@ class RandomPlayer:
         return random.randint(0,len(choices)-1)
     
     def ask_whichaction(self, actions):
-        result = self.ask_which(map(lambda x: x.name, actions), message="Which action?")
-        if not actions: return -1
-        print "play", actions[result].name
-        return result
+        maxcost = 0
+        choice = -1
+        for i, a in enumerate(actions):
+            if a.price > maxcost:
+                maxcost = a.price
+                choice = i
+        return choice
         
     def ask_whichbuy(self, options):
-        result = self.ask_which(map(lambda x: x.type.name, options), message="which buy?")
-        if not options: return -1
-        print "Buy", options[result].type.name
-        return result
+        maxcost = 0
+        choice = -1
+        for i, o in enumerate(options):
+            if o.type.price > maxcost:
+                maxcost = o.type.price
+                choice = i
+        return choice
         
     def ask_whichgain(self, options):
-        result = self.ask_which(map(lambda x: x.type.name, options), message="which gain?")
-        print "gain", options[result].type.name
-        return result
+        maxcost = 0
+        choice = -1
+        
+        for i, o in enumerate(options):
+            if o.type.price > maxcost:
+                maxcost = o.type.price
+                choice = i
+        return choice
         
     def ask_whichdiscard(self, cards, optional):
         options = cards
         if optional:
-            options = ["Do nothing"] + options
+            return -1
+
         return self.ask_which(options)
         
     def ask_whichreaction(self, cards):
