@@ -4,8 +4,6 @@ import sys
 import optparse
 import cards
 import threading
-import gtk
-import gobject
 
 class Player:
     def __init__(self, deck, player_interface, name):
@@ -246,7 +244,8 @@ class Game:
             p.reshuffle()
             for i in xrange(5):
                 p.draw_card()
-        while not self.check_game_end():
+        n = 0
+        while not self.check_game_end() and n < 1000:
             p = self.players[self.active_player]
             p.start_turn()
             want_play = True
@@ -260,6 +259,9 @@ class Game:
             p.end_turn()
             self.active_player += 1
             self.active_player %= len(self.players)
+            n += 1
+        if n == 10000:
+            print >> sys.stderr, "game lasted for 10000 turns, probably not going to end"
         for p in self.players:
             p.calculate_points()
         self.players.sort(key=lambda p: p.points)
@@ -270,6 +272,7 @@ class Game:
         winner = self.players[-1]
         for p in self.players:
             p.tell_winner(winner, p.points, sum(map(lambda p: p.points, self.players)))
+        return winner
 
     def check_game_end(self):
         return self.stacks[-1].count == 0
@@ -289,6 +292,9 @@ def make_player(type, nr):
     elif type == "ai.expensive":
         import ai
         interface = ai.ExpensiveCardPlayer("Player %d"%nr)
+    elif type == "ai.buylist":
+        import ai
+        interface = ai.BuylistPlayer("Player %d"%nr)
     elif type == "gtk":
         import ui
         interface = ui.GtkPlayer("Player %d"%nr)
@@ -296,10 +302,11 @@ def make_player(type, nr):
 
 def main():
     parser = optparse.OptionParser()
-    parser.add_option("-1", "--player-1", "--p1", action="store", type="choice", choices=["basic", "ai.random", "gtk", "ai.counting", "ai.expensive"], default="ai.random", dest="player1")
-    parser.add_option("-2", "--player-2", "--p2", action="store", type="choice", choices=["basic", "ai.random", "gtk", "ai.counting", "ai.expensive"], default="ai.random", dest="player2")
-    parser.add_option("-3", "--player-3", "--p3", action="store", type="choice", choices=["basic", "ai.random", "gtk", "ai.counting", "ai.expensive"], default=None, dest="player3")
-    parser.add_option("-4", "--player-4", "--p4", action="store", type="choice", choices=["basic", "ai.random", "gtk", "ai.counting", "ai.expensive"], default=None, dest="player4")
+    playertypes = ["basic", "ai.random", "gtk", "ai.counting", "ai.expensive", "ai.buylist"]
+    parser.add_option("-1", "--player-1", "--p1", action="store", type="choice", choices=playertypes, default="ai.random", dest="player1")
+    parser.add_option("-2", "--player-2", "--p2", action="store", type="choice", choices=playertypes, default="ai.random", dest="player2")
+    parser.add_option("-3", "--player-3", "--p3", action="store", type="choice", choices=playertypes, default=None, dest="player3")
+    parser.add_option("-4", "--player-4", "--p4", action="store", type="choice", choices=playertypes, default=None, dest="player4")
     (options,args) = parser.parse_args()
     players = [make_player(options.player1, 1), make_player(options.player2, 2)]
     g = Game(players)
