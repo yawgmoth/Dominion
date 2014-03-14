@@ -1,0 +1,112 @@
+{
+    "players": [
+        {
+            "discard_pile": [], 
+            "hand": [
+                "Gold", 
+                "Gold", 
+                "Gold", 
+                "Gold", 
+                "Estate"
+            ], 
+            "name": "Player 1", 
+            "in_play": [], 
+            "deck": [
+                "Estate", "Estate", "Estate", "Gold", "Gold", "Gold", "Gold", "Gold", "Gold", "Gold", "Gold"
+            ]
+        }, 
+        {
+            "discard_pile": [
+                
+            ], 
+            "hand": [
+                "Copper", 
+                "Copper", 
+                "Copper", 
+                "Copper", 
+                "Estate"
+            ], 
+            "name": "Player 2", 
+            "in_play": [], 
+            "deck": [
+                "Copper", 
+                "Copper", 
+                "Copper", 
+                "Estate", 
+                "Estate"
+            ]
+        }
+    ], 
+    "player_count": 2, 
+    "stacks": [
+        {
+            "count": 26, 
+            "card": "Copper"
+        }, 
+        {
+            "count": 28, 
+            "card": "Silver"
+        }, 
+        {
+            "count": 30, 
+            "card": "Gold"
+        }, 
+        {
+            "count": 8, 
+            "card": "Cellar"
+        }, 
+        {
+            "count": 10, 
+            "card": "Library"
+        }, 
+        {
+            "count": 7, 
+            "card": "Gardens"
+        }, 
+        {
+            "count": 9, 
+            "card": "Feast"
+        }, 
+        {
+            "count": 6, 
+            "card": "Moat"
+        }, 
+        {
+            "count": 10, 
+            "card": "Council Room"
+        }, 
+        {
+            "count": 9, 
+            "card": "Workshop"
+        }, 
+        {
+            "count": 10, 
+            "card": "Witch"
+        }, 
+        {
+            "count": 9, 
+            "card": "Village"
+        }, 
+        {
+            "count": 9, 
+            "card": "Throne Room"
+        }, 
+        {
+            "count": 36, 
+            "card": "Curse"
+        }, 
+        {
+            "count": 17, 
+            "card": "Estate"
+        }, 
+        {
+            "count": 12, 
+            "card": "Duchy"
+        }, 
+        {
+            "count": 12, 
+            "card": "Province"
+        }
+    ], 
+    "active_player": 1
+}

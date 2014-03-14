@@ -374,7 +374,9 @@ def main():
     if options.player4:
         players.append(make_player(options.player4, 4, options.player4_options))
     
-    opts = dict(map(lambda o: o.split("="), options.game_options.split(",")))
+    opts = {}
+    if options.game_options:
+        opts = dict(map(lambda o: o.split("="), options.game_options.split(",")))
     
     if "load" in opts:
         g = Game.from_state(filecontent(opts["load"]), map(lambda p: p.player_interface, players))

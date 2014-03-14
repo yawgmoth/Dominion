@@ -7,6 +7,11 @@ This program is an implementation of the card game Dominion by Donald X. Vaccari
  - Only "no provinces left" is implemented as game end condition
  - Random selection of kingdom cards
  - Two-player game
+ 
+* Usage
+ - The most interesting way to use it right now is for simulations of many games
+ - e.g. python trial.py -1 ai.random -2 ai.expensive (Run 1000 games of random vs expensive AIs and report stats)
+ - e.g. python trial.py -1 ai.random -2 ai.expensive -o load=state.save (Run 1000 games of random vs expensive AIs starting in the state described in state.save)
 
 * Todos
  - Proper game ending (When 3 action stacks are exhausted, too)
@@ -16,4 +21,3 @@ This program is an implementation of the card game Dominion by Donald X. Vaccari
  - AI
  - More card sets
  - More options: Force inclusion/exclusion of kingdom cards, make preset lists available, ...
- - More players
