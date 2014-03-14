@@ -5,7 +5,7 @@ CURSE = 8
 REACTION = 16
 ATTACK = 32
 
-class Card:
+class Card(object):
     def perform_cleanup(self):
         return True
         

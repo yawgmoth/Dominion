@@ -11,9 +11,12 @@ def load_buylist(fname):
     return buylist
 
 class BuylistPlayer:
-    def __init__(self, name, buylist="default.buys"):
+    def __init__(self, name, buylist_file="default.buys", buylist = None):
         self.name = name
-        self.buylist = load_buylist(buylist)
+        if buylist:
+            self.buylist = buylist[:]
+        else:
+            self.buylist = load_buylist(buylist_file)
         
     def tell_stacks(self, stacks):
         print "Available stacks this game:"

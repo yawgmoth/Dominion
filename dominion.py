@@ -4,6 +4,7 @@ import sys
 import optparse
 import cards
 import threading
+import json
 
 class Player:
     def __init__(self, deck, player_interface, name):
@@ -229,17 +230,51 @@ class Player:
         self.player_interface.tell_winner(winner.player_interface.get_name(), *args)
         
 class Game:
-    def __init__(self, players):
+    def __init__(self, players, saveat=-1):
         self.players = players
         self.stacks = cards.make_stacks()
         self.trash = []
+        self.active_player = 0
         for p in self.players:
             p.game = self
+        self.saveat = int(saveat)
+            
+    def get_state(self):
+        result = {}
+        result["player_count"] = len(self.players)
+        result["active_player"] = self.active_player
+        players = []
+        stacks = map(lambda s: {"card": s.type.name, "count": s.count}, self.stacks)
+        result["stacks"] = stacks
+        def cards_to_list(cards):
+            return map(lambda c: c.name, cards)
+        for p in self.players:
+            players.append({"name": p.name, "deck": cards_to_list(p.deck), "hand": cards_to_list(p.hand), "discard_pile": cards_to_list(p.discard_pile), "in_play": cards_to_list(p.in_play)})
+        result["players"] = players
+        return json.dumps(result, indent=4)
+    
+    @classmethod
+    def from_state(cls, state, ais=[]):
+        players = []
+        state_dict = json.loads(state)
+        if len(ais) != state_dict["player_count"]:
+            raise "Invalid game state for player count!"
+        
+        
+        for ai, pstate in zip(ais, state_dict["players"]):
+            ai.name = pstate["name"]
+            players.append( Player(map(cards.card_by_name, pstate["deck"]), ai, pstate["name"]))
+        result = Game(players)
+        
+        result.stacks = map(lambda s: cards.Stack(cards.type_by_name(s["card"]), s["count"]), state_dict["stacks"])
+        result.active_player = state_dict["active_player"]
+        return result
+        
 
     def run(self):
         for p in self.players:
             p.tell_stacks(self.stacks)
-        self.active_player = 0
+        
         for p in self.players:
             p.reshuffle()
             for i in xrange(5):
@@ -260,6 +295,11 @@ class Game:
             self.active_player += 1
             self.active_player %= len(self.players)
             n += 1
+            if n == self.saveat:
+                f = open("state.save", "w")
+                f.write(self.get_state())
+                f.close()
+        
         if n == 10000:
             print >> sys.stderr, "game lasted for 10000 turns, probably not going to end"
         for p in self.players:
@@ -280,7 +320,12 @@ class Game:
 def make_start_deck():
     return [cards.Copper() for i in xrange(7)] + [cards.Estate() for i in xrange(3)]
     
-def make_player(type, nr):
+def make_player(type, nr, opts):
+    if opts:
+        opts = dict(map(lambda o: o.split("="), opts.split(",")))
+    else:
+        opts = {}
+    
     if type == "basic":
         interface = PlayerInterface("Player %d"%nr)
     elif type == "ai.random":
@@ -294,11 +339,19 @@ def make_player(type, nr):
         interface = ai.ExpensiveCardPlayer("Player %d"%nr)
     elif type == "ai.buylist":
         import ai
-        interface = ai.BuylistPlayer("Player %d"%nr)
+        interface = ai.BuylistPlayer("Player %d"%nr, **opts)
     elif type == "gtk":
         import ui
         interface = ui.GtkPlayer("Player %d"%nr)
     return Player(make_start_deck(), interface, "Player %d"%nr)
+    
+def filecontent(fname):
+    f = open(fname)
+    result = ""
+    for l in f:
+        result += l
+    f.close()
+    return result
 
 def main():
     parser = optparse.OptionParser()
@@ -307,14 +360,28 @@ def main():
     parser.add_option("-2", "--player-2", "--p2", action="store", type="choice", choices=playertypes, default="ai.random", dest="player2")
     parser.add_option("-3", "--player-3", "--p3", action="store", type="choice", choices=playertypes, default=None, dest="player3")
     parser.add_option("-4", "--player-4", "--p4", action="store", type="choice", choices=playertypes, default=None, dest="player4")
+    parser.add_option("-a", "--player-1-options", dest="player1_options", default="")
+    parser.add_option("-b", "--player-2-options", dest="player2_options", default="")
+    parser.add_option("-c", "--player-3-options", dest="player3_options", default="")
+    parser.add_option("-d", "--player-4-options", dest="player4_options", default="")
+    parser.add_option("-o", "--game-options", dest="game_options", default="")
+    
     (options,args) = parser.parse_args()
-    players = [make_player(options.player1, 1), make_player(options.player2, 2)]
-    g = Game(players)
-    use_gtk = False
-    for p in [options.player1, options.player2]:
-        if p == "gtk":
-            use_gtk = True
-    if use_gtk:
+    
+    players = [make_player(options.player1, 1, options.player1_options), make_player(options.player2, 2, options.player2_options)]
+    if options.player3:
+        players.append(make_player(options.player3, 3, options.player3_options))
+    if options.player4:
+        players.append(make_player(options.player4, 4, options.player4_options))
+    
+    opts = dict(map(lambda o: o.split("="), options.game_options.split(",")))
+    
+    if "load" in opts:
+        g = Game.from_state(filecontent(opts["load"]), map(lambda p: p.player_interface, players))
+    else:
+        g = Game(players, **opts)
+
+    if "gtk" in [options.player1, options.player2, options.player3, options.player4]:
         import gobject
         import gtk
         gobject.threads_init()

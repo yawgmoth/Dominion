@@ -268,21 +268,21 @@ class Bureaucrat(Card):
             silver_stack = silver_stack[0]
             silver_stack.count -= 1
             player.deck.insert(0, silver_stack.type())
-            for p in player.get_other_players():
-                if p.attack(player, self):
-                    victory_cards = []
+        for p in player.get_other_players():
+            if p.attack(player, self):
+                victory_cards = []
+                for c in p.hand:
+                    if c.type & VICTORY == VICTORY:
+                        victory_cards.append(c)
+                if not victory_cards:
                     for c in p.hand:
-                        if c.type & VICTORY == VICTORY:
-                            victory_cards.append(c)
-                    if not victory_cards:
-                        for c in p.hand:
-                            p.reveal_card(c)
-                    else:        
-                        which = p.choose_victorycard(victory_cards, self)
-                        p.reveal_card(victory_cards[which])
-                        idx = p.hand.index(victory_cards[which])
-                        p.deck.insert(0, p.hand[idx])
-                        del p.hand[idx]
+                        p.reveal_card(c)
+                else:        
+                    which = p.choose_victorycard(victory_cards, self)
+                    p.reveal_card(victory_cards[which])
+                    idx = p.hand.index(victory_cards[which])
+                    p.deck.insert(0, p.hand[idx])
+                    del p.hand[idx]
 
 class Militia(Card):
     price = 4
