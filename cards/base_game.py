@@ -326,11 +326,11 @@ class Thief(Card):
                 treasures = []
                 if c1 and c1.type & TREASURE == TREASURE:
                     treasures.append(c1)
-                else:
+                elif c1:
                     p.discard_pile.append(c1)
                 if c2 and c2.type & TREASURE == TREASURE:
                     treasures.append(c2)
-                else:
+                elif c2:
                     p.discard_pile.append(c2)
                 if treasures:
                     which = player.ask_whichtrash(treasures, True)
@@ -374,3 +374,4 @@ class Library(Card):
                 player.hand.append(next_card)
             else:
                 next = False
+        player.discard_pile.extend(aside)

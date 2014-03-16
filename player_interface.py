@@ -3,6 +3,9 @@ class PlayerInterface:
         print "Welcome to Dominion", name
         self.name = name
         
+    def set_game(self, game):
+        pass
+        
     def tell_stacks(self, stacks):
         print "Available stacks this game:"
         for s in stacks:

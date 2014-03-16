@@ -1,4 +1,7 @@
 import random
+import player_interface
+import dominion
+import os
 
 def load_buylist(fname):
     f = open(fname)
@@ -10,43 +13,91 @@ def load_buylist(fname):
     f.close()
     return buylist
 
-class BuylistPlayer:
-    def __init__(self, name, buylist_file="default.buys", buylist = None):
+class BuylistPlayer(player_interface.PlayerInterface):
+    def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=True, show_text=True, graph=False, logs=False):
         self.name = name
         if buylist:
-            self.buylist = buylist[:]
+            self.buylist = map(lambda l: l[:], buylist)
         else:
             self.buylist = load_buylist(buylist_file)
+        self.run_trials = run_trials
+        if self.run_trials == "False":
+            self.run_trials = False
+        self.show_text = show_text
+        self.stats = {}
+        self.graph = graph
+        self.n = 0
+        self.logs = logs
+        if self.logs:
+            if not os.path.exists("games"):
+                os.makedirs("games")
+            
+    def set_game(self, game):
+        self.game = game
         
     def tell_stacks(self, stacks):
-        print "Available stacks this game:"
-        for s in stacks:
-            print s.type.name, " (" + str(s.count) + " available)"
-        
+        if self.show_text:
+            print "Available stacks this game:"
+            for s in stacks:
+                print s.type.name, " (" + str(s.count) + " available)"
+            
     def tell_start_turn(self):
-        print self.name + ", it's your turn!"
+        if self.run_trials:
+            state = self.game.get_state()
+            winners = {}
+            for i in xrange(100):
+                players = [BuylistPlayer("Player %d"%j, buylist=self.buylist, run_trials=False, show_text=False) for j,p in enumerate(self.game.players)]
+                g = dominion.Game.from_state(state, players, shuffle=True)
+                s0 = g.get_state()
+                
+                winner = g.run()
+                for p in g.players:
+                    if p.name not in winners:
+                        winners[p.name] = 0
+                winners[winner.name] += 1
+                if i == 0 and self.logs:
+                    f = open("games/game_%d.log"%self.n, "w")
+                    self.n += 1
+                    print >>f, "Starting from", state
+                    print >>f, "should be the same:", s0
+                    print >>f, "ending in", g.get_state()
+                    print >>f, "winner", winner.name
+                    print >>f, "Game ended because:", g.end_reason
+                    print >>f, "buylist was", self.buylist
+                    f.close()
+            winsum = sum(winners.values())
+            for w in winners:
+                if w not in self.stats:
+                    self.stats[w] = []
+                self.stats[w].append(winners[w]*100.0/winsum)
+        if self.show_text:
+            print self.name + ", it's your turn!"
 
     def tell_hand(self, hand):
-        print "Your hand contains:"
-        for h in hand:
-            print " ", h.name
+        if self.show_text:
+            print "Your hand contains:"
+            for h in hand:
+                print " ", h.name
             
     def tell_deck(self, hand):
-        print "Your deck contains:"
-        for h in hand:
-            print " ", h.name
+        if self.show_text:
+            print "Your deck contains:"
+            for h in hand:
+                print " ", h.name
 
     def tell_stats(self, player):
-        print "You have:"
-        print " ", player.actions, "Actions"
-        print " ", player.buys, "Buys"
-        print " ", player.money, "Money"
+        if self.show_text:
+            print "You have:"
+            print " ", player.actions, "Actions"
+            print " ", player.buys, "Buys"
+            print " ", player.money, "Money"
         
     def tell_buyphase(self):
-        print "Buyphase!"
+        if self.show_text:
+            print "Buyphase!"
         
     def tell_reveal(self, player, card):
-        if card:
+        if card and self.show_text:
             print player.name, "reveals", card.name
     
     def ask_buy(self, money=0):
@@ -61,7 +112,7 @@ class BuylistPlayer:
     def ask_which(self, choices, message=""):
         if not choices:
             return -1
-        if message:
+        if message and self.show_text:
             print message
             for i, c in enumerate(choices):
                 print " ", i+1, c
@@ -70,7 +121,8 @@ class BuylistPlayer:
     def ask_whichaction(self, actions):
         result = self.ask_which(map(lambda x: x.name, actions), message="Which action?")
         if not actions: return -1
-        print "play", actions[result].name
+        if self.show_text:
+            print "play", actions[result].name
         return result
         
     def ask_whichbuy(self, options):
@@ -89,7 +141,8 @@ class BuylistPlayer:
                 return opts.index(l[0])
         
         result = self.ask_which(map(lambda x: x.type.name, options), message="which gain?")
-        print "gain", options[result].type.name
+        if self.show_text:
+            print "gain", options[result].type.name
         return result
 
     def ask_whichdiscard(self, cards, optional):
@@ -120,7 +173,19 @@ class BuylistPlayer:
         pass
         
     def tell_winner(self, winner, *args):
-        print winner, "has won the game!"
+        if self.show_text:
+            print winner, "has won the game!"
+        if not self.run_trials: return
+        if self.graph:
+            from mpl_toolkits.axes_grid.axislines import SubplotZero
+            import matplotlib.pyplot as plt
+            fig = plt.figure(1)
+            ax = SubplotZero(fig, 111)
+            fig.suptitle("Winrate of %s over time"%(self.stats.keys()[0]))
+            fig.add_subplot(ax)
+            ax.plot(self.stats.values()[0])
+            plt.show()
+        print self.stats.values()[0]
     
     def get_name(self):
         return self.name

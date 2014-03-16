@@ -11,10 +11,13 @@ all_kingdom_cards = [Cellar, Chapel, Chancellor, Woodcutter, Workshop, Feast, Ga
 
 random.shuffle(all_kingdom_cards)
                      
+def get_default_stacks():
+    return [Stack(Copper, 30), Stack(Silver, 30), Stack(Gold, 30),
+            Stack(Curse, 40), Stack(Estate, 20), Stack(Duchy, 12), Stack(Province, 12)]
+
 def make_stacks():
-    return [Stack(Copper, 30), Stack(Silver, 30), Stack(Gold, 30)] + \
-            map(lambda t: Stack(t, 10), all_kingdom_cards[:10]) + \
-           [Stack(Curse, 40), Stack(Estate, 20), Stack(Duchy, 12), Stack(Province, 12)]
+    return get_default_stacks() + map(lambda t: Stack(t, 10), all_kingdom_cards[:10])
+           
            
 def card_by_name(name):
     for c in all_kingdom_cards + [Gold, Silver, Copper, Curse, Estate, Duchy, Province]:

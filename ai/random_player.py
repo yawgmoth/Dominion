@@ -1,6 +1,7 @@
 import random
+import player_interface
 
-class RandomPlayer:
+class RandomPlayer(player_interface.PlayerInterface):
     def __init__(self, name):
         self.name = name
         

@@ -63,6 +63,10 @@ class Player:
         a.pre_play(self)
         a.play(self)
         a.post_play(self)
+        if None in self.deck + self.discard_pile + self.hand:
+            print a
+            import pdb
+            pdb.set_trace()
         self.player_interface.tell_hand(self.hand)
         self.player_interface.tell_stats(self)
         return True
@@ -208,6 +212,9 @@ class Player:
         self.deck = self.in_play + self.deck + self.hand + self.discard_pile
         which = {}
         for c in self.deck:
+            if not c:
+                import pdb
+                pdb.set_trace()
             if c.type & cards.VICTORY == cards.VICTORY:
                 self.points += c.get_points(self)
                 if c.name not in which:
@@ -229,14 +236,28 @@ class Player:
     def tell_winner(self, winner, *args):
         self.player_interface.tell_winner(winner.player_interface.get_name(), *args)
         
+    def set_game(self, game):
+        self.player_interface.set_game(game)
+        self.game = game
+        
 class Game:
-    def __init__(self, players, saveat=-1):
+    def __init__(self, players, saveat=-1, kingdom=None):
         self.players = players
-        self.stacks = cards.make_stacks()
+        if kingdom:
+            cardnames = kingdom.split(";")
+            self.stacks = cards.get_default_stacks()
+            for c in cardnames:
+                count = 10
+                card = c
+                if ":" in c:
+                    card, count = c.split(":")
+                self.stacks.append(cards.base.Stack(cards.type_by_name(card), int(count)))
+        else:
+            self.stacks = cards.make_stacks()
         self.trash = []
         self.active_player = 0
         for p in self.players:
-            p.game = self
+            p.set_game(self)
         self.saveat = int(saveat)
             
     def get_state(self):
@@ -254,7 +275,7 @@ class Game:
         return json.dumps(result, indent=4)
     
     @classmethod
-    def from_state(cls, state, ais=[]):
+    def from_state(cls, state, ais=[], shuffle=False):
         players = []
         state_dict = json.loads(state)
         if len(ais) != state_dict["player_count"]:
@@ -264,6 +285,10 @@ class Game:
         for ai, pstate in zip(ais, state_dict["players"]):
             ai.name = pstate["name"]
             players.append( Player(map(cards.card_by_name, pstate["deck"]), ai, pstate["name"]))
+            players[-1].discard_pile = map(cards.card_by_name, pstate["discard_pile"])
+            players[-1].hand = map(cards.card_by_name, pstate["hand"])
+            if shuffle:
+                random.shuffle(players[-1].deck)
         result = Game(players)
         
         result.stacks = map(lambda s: cards.Stack(cards.type_by_name(s["card"]), s["count"]), state_dict["stacks"])
@@ -276,9 +301,10 @@ class Game:
             p.tell_stacks(self.stacks)
         
         for p in self.players:
-            p.reshuffle()
-            for i in xrange(5):
-                p.draw_card()
+            if len(p.hand) < 5:
+                p.reshuffle()
+                for i in xrange(5):
+                    p.draw_card()
         n = 0
         while not self.check_game_end() and n < 1000:
             p = self.players[self.active_player]
@@ -300,8 +326,9 @@ class Game:
                 f.write(self.get_state())
                 f.close()
         
-        if n == 10000:
-            print >> sys.stderr, "game lasted for 10000 turns, probably not going to end"
+        if n == 1000:
+            print >> sys.stderr, "game lasted for 1000 turns, probably not going to end"
+            self.end_reason = "timeout"
         for p in self.players:
             p.calculate_points()
         self.players.sort(key=lambda p: p.points)
@@ -315,7 +342,15 @@ class Game:
         return winner
 
     def check_game_end(self):
-        return self.stacks[-1].count == 0
+        isempty = 0
+        for s in self.stacks:
+            if s.type.name == "Province" and s.count == 0: 
+                self.end_reason = "provinces gone"
+                return True
+            if s.count == 0:
+                isempty += 1
+        self.end_reason = "%d empty stacks"%isempty
+        return isempty > 2
 
 def make_start_deck():
     return [cards.Copper() for i in xrange(7)] + [cards.Estate() for i in xrange(3)]

@@ -2,8 +2,9 @@ import gtk
 import gobject
 import threading
 import sys
+import base_player
 
-class GtkPlayer:
+class GtkPlayer(base_player.BasePlayer):
     def __init__(self, name):
         self.name = name
         window = gtk.Window()

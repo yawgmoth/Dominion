@@ -12,6 +12,7 @@ This program is an implementation of the card game Dominion by Donald X. Vaccari
  - The most interesting way to use it right now is for simulations of many games
  - e.g. python trial.py -1 ai.random -2 ai.expensive (Run 1000 games of random vs expensive AIs and report stats)
  - e.g. python trial.py -1 ai.random -2 ai.expensive -o load=state.save (Run 1000 games of random vs expensive AIs starting in the state described in state.save)
+ - python dominion.py -1 ai.random -2 ai.buylist -o kingdom=Village;Market;Smithy -b graph=True (Run a game of random vs. buylist; the buylist AI will simulate 100 games every turn that start in the current state and will plot the stats afterwards)
 
 * Todos
  - Proper game ending (When 3 action stacks are exhausted, too)

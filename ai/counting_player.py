@@ -1,6 +1,7 @@
 import random
 import os
 import cPickle
+import player_interface
 
 EXPLORATION_RATE = 1.0
 STRETCH_FACTOR = 1.0
@@ -118,7 +119,7 @@ class GameStats:
         return result
         
 
-class CountingPlayer:
+class CountingPlayer(player_interface.PlayerInterface):
     def __init__(self, name):
         self.name = name
         self.fname = name
