@@ -1,0 +1,128 @@
+{
+  "play": [  
+            { "conditions":
+                   [ {"card": "Market", "op": ">", "qty": 0} ],
+              "card": "Throne Room"
+            },
+            { "conditions":
+                   [ {"card": "Laboratory", "op": ">", "qty": 0} ],
+              "card": "Throne Room"
+            },
+            { "conditions":
+                   [ {"card": "Village", "op": ">", "qty": 0} ],
+              "card": "Throne Room"
+            },
+            { "conditions":
+                   [ {"card": "Festival", "op": ">", "qty": 0} ],
+              "card": "Throne Room"
+            },
+            { "conditions":
+                   [ {"card": "Thief", "op": ">", "qty": 0} ],
+              "card": "Throne Room"
+            },
+            { "conditions": [],
+              "card": "Laboratory"
+            },
+            { "conditions": [],
+              "card": "Market"
+            },
+            { "conditions": [],
+              "card": "Village"
+            },
+            { "conditions": [],
+              "card": "Festival"
+            },
+            { "conditions": [],
+              "card": "Spy"
+            },
+            { "conditions":
+                   [ {"card": "Curse", "op": ">", "qty": 0} ],
+              "card": "Chapel"
+            },
+            { "conditions":
+                   [ {"card": "Curse", "op": ">", "qty": 0} ],
+              "card": "Remodel"
+            },
+            { "conditions":
+                   [ {"card": "Estate", "op": ">", "qty": 0} ],
+              "card": "Chapel"
+            },
+            { "conditions":
+                   [ {"card": "Silver", "op": ">", "qty": 0} ],
+              "card": "Mine"
+            },
+            { "conditions":
+                   [ {"card": "Copper", "op": ">", "qty": 0}, {"card": "Silver", "op": ">", "qty": 0} ],
+              "card": "Chapel"
+            },
+            { "conditions":
+                   [ {"card": "Copper", "op": ">", "qty": 0} ],
+              "card": "Mine"
+            },
+            { "conditions":
+                   [ {"card": "Estate", "op": ">", "qty": 0} ],
+              "card": "Cellar"
+            },
+            { "conditions":
+                   [ {"card": "Witch", "op": ">", "qty": 0} ],
+              "card": "Throne Room"
+            },
+            { "conditions":
+                   [ {"card": "Smithy", "op": ">", "qty": 0} ],
+              "card": "Throne Room"
+            },
+            { "conditions":
+                   [ {"card": "Total", "op": "<", "qty": 7} ],
+              "card": "Library"
+            },
+            { "conditions":
+                   [ {"card": "Estate", "op": ">", "qty": 0} ],
+              "card": "Remodel"
+            },
+            { "conditions":
+                   [ {"card": "Copper", "op": ">", "qty": 0} ],
+              "card": "Moneylender"
+            },
+            { "conditions": [],
+              "card": "Witch"
+            },
+            { "conditions": [],
+              "card": "Council Room"
+            },
+            { "conditions": [],
+              "card": "Smithy"
+            },
+            { "conditions": [],
+              "card": "Adventurer"
+            },
+            { "conditions": [],
+              "card": "Moat"
+            },
+            { "conditions": [],
+              "card": "Militia"
+            },
+            { "conditions": [],
+              "card": "Feast"
+            },
+            { "conditions": [],
+              "card": "Woodcutter"
+            },
+            { "conditions": [],
+              "card": "Chancellor"
+            },
+            { "conditions": [],
+              "card": "Workshop"
+            },
+            { "conditions": [],
+              "card": "Bureaucrat"
+            }
+        ],
+   "trash": [ "Curse", "Estate", "Copper", "Silver" ],
+   "Spy": { "discard_self": [ "Curse", "Copper", "Estate", "Duchy", "Province", "Gardens" ],
+            "discard_other": [ "Cellar", "Chapel", "Chancellor", "Woodcutter", "Workshop", "Feast", "Moneylender", 
+                               "Remodel", "ThroneRoom", "Council Room", "Laboratory", "Market", "Mine", "Adventurer", "Village",
+                               "Festival", "Smithy", "Moat", "Bureaucrat", "Militia", "Spy", "Thief", "Witch", "Library"]
+          },
+   "Thief": { "trash": [ "Gold", "Silver", "Copper" ],
+              "gain": [ "Gold", "Silver" ] }
+}

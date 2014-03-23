@@ -6,7 +6,7 @@ import time
 
 def main():
     parser = optparse.OptionParser()
-    playertypes = ["basic", "ai.random", "gtk", "ai.counting", "ai.expensive", "ai.buylist"]
+    playertypes = ["basic", "ai.random", "gtk", "ai.counting", "ai.expensive", "ai.buylist", "ai.heuristic", "ai.combining"]
     parser.add_option("-1", "--player-1", "--p1", action="store", type="choice", choices=playertypes, default="ai.random", dest="player1")
     parser.add_option("-2", "--player-2", "--p2", action="store", type="choice", choices=playertypes, default="ai.random", dest="player2")
     parser.add_option("-3", "--player-3", "--p3", action="store", type="choice", choices=playertypes, default=None, dest="player3")

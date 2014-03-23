@@ -355,9 +355,9 @@ class Game:
 def make_start_deck():
     return [cards.Copper() for i in xrange(7)] + [cards.Estate() for i in xrange(3)]
     
-def make_player(type, nr, opts):
+def make_player(type, nr, opts, interface_only=False):
     if opts:
-        opts = dict(map(lambda o: o.split("="), opts.split(",")))
+        opts = dict(map(lambda o: o.split("=", 1), opts.split(",")))
     else:
         opts = {}
     
@@ -375,9 +375,17 @@ def make_player(type, nr, opts):
     elif type == "ai.buylist":
         import ai
         interface = ai.BuylistPlayer("Player %d"%nr, **opts)
+    elif type == "ai.heuristic":
+        import ai
+        interface = ai.HeuristicPlayer("Player %d"%nr, **opts)
+    elif type == "ai.combining":
+        import ai
+        interface = ai.CombiningPlayer("Player %d"%nr, **opts)
     elif type == "gtk":
         import ui
         interface = ui.GtkPlayer("Player %d"%nr)
+    if interface_only:
+        return interface
     return Player(make_start_deck(), interface, "Player %d"%nr)
     
 def filecontent(fname):
@@ -390,7 +398,7 @@ def filecontent(fname):
 
 def main():
     parser = optparse.OptionParser()
-    playertypes = ["basic", "ai.random", "gtk", "ai.counting", "ai.expensive", "ai.buylist"]
+    playertypes = ["basic", "ai.random", "gtk", "ai.counting", "ai.expensive", "ai.buylist", "ai.heuristic", "ai.combining"]
     parser.add_option("-1", "--player-1", "--p1", action="store", type="choice", choices=playertypes, default="ai.random", dest="player1")
     parser.add_option("-2", "--player-2", "--p2", action="store", type="choice", choices=playertypes, default="ai.random", dest="player2")
     parser.add_option("-3", "--player-3", "--p3", action="store", type="choice", choices=playertypes, default=None, dest="player3")
