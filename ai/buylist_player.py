@@ -8,18 +8,102 @@ def load_buylist(fname):
     buylist = []
     for l in f:
         if l:
-            item, count = l.split()
+            item, count = l.rsplit(" ",1)
             buylist.append([item,int(count)])
     f.close()
     return buylist
+	
+def create_buylist(self):
+    kingdom = get_kingdoms(self)
+	#remove copper, silver, gold, and province- already accounted for in template strategy
+    del kingdom[0]
+    del kingdom[0]
+    del kingdom[0]
+    del kingdom[3]
+    self.kingdom = kingdom
+    random.shuffle(kingdom);
+    self.adaptiveBuyFile = "adaptiveBuylist.buys"
+	#just random for now
+    target = open (self.adaptiveBuyFile, 'w')
+    target.write("%s %d\n" % (kingdom[0], 3))
+    target.write("Province 99\n")
+    target.write("Gold 99\n")
+    target.write("%s %d\n" % (kingdom[1], 3))
+    target.write("%s %d\n" % (kingdom[2], 3))
+    target.write("%s %d\n" % (kingdom[3], 3))	
+    target.write("%s %d\n" % (kingdom[4], 3))
+    target.write("%s %d\n" % (kingdom[5], 3))	
+    target.write("Silver 99\n")	
+    target.write("%s %d\n" % (kingdom[6], 3))
+    target.write("%s %d\n" % (kingdom[7], 3))
+    target.write("%s %d\n" % (kingdom[8], 3))
+    target.write("%s %d" % (kingdom[9], 3))	
+    target.close()
+    return load_buylist(self.adaptiveBuyFile)   
+	
+def get_kingdoms(self):
+    kingdom = []
+    for s in self.game.stacks:
+        kingdom.append(s.type.name)
+    return kingdom
+
+def run_trials(self, trials):
+        state = self.game.get_state()
+        winners = {}
+        for i in xrange(trials):
+            players = [BuylistPlayer("Player %d"%j, buylist=self.buylist, run_trials=False, show_text=False, adaptive = False) for j,p in enumerate(self.game.players)]
+            g = dominion.Game.from_state(state, players, shuffle=True)
+            s0 = g.get_state()
+
+            winner = g.run()
+            for p in g.players:
+                if p.name not in winners:
+                    winners[p.name] = 0
+            winners[winner.name] += 1
+            if i == 0 and self.logs:
+                f = open("games/game_%d.log"%self.n, "w")
+                self.n += 1
+                print >>f, "Starting from", state
+                print >>f, "should be the same:", s0
+                print >>f, "ending in", g.get_state()
+                print >>f, "winner", winner.name
+                print >>f, "Game ended because:", g.end_reason
+                print >>f, "buylist was", self.buylist
+                f.close()
+        winsum = sum(winners.values())
+        finalstat =0
+        for w in winners:
+            if w not in self.stats:
+                self.stats[w] = []
+            self.stats[w].append(winners[w]*100.0/winsum)
+            finalstat = winners[w]*100.0/winsum
+        #return final winrate
+        return finalstat
+		
+def test_initial_buylist(self):
+    result = 0
+    result= run_trials(self, 10)
+    if(result > 50.0):
+        print "Buylist wins over 50% to start"
+    else:
+        i=1
+        while result < 50.0:
+            create_buylist(self)
+            result = run_trials(self,10)
+            i+=1
+        print "Took %d iterations to get a win with result %d" % (i, result)
+        
 
 class BuylistPlayer(player_interface.PlayerInterface):
-    def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=True, show_text=True, graph=False, logs=False):
+    def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=True, show_text=False, graph=False, logs=False, adaptive=True):
         self.name = name
-        if buylist:
-            self.buylist = map(lambda l: l[:], buylist)
-        else:
-            self.buylist = load_buylist(buylist_file)
+		#adaptive overrides using a set buylist, creates one turn by turn
+        self.adaptive = adaptive
+        if not adaptive:
+            if buylist:
+                self.buylist = map(lambda l: l[:], buylist)
+            else:
+                self.buylist = load_buylist(buylist_file)
         self.run_trials = run_trials
         if self.run_trials == "False":
             self.run_trials = False
@@ -28,12 +112,19 @@ class BuylistPlayer(player_interface.PlayerInterface):
         self.graph = graph
         self.n = 0
         self.logs = logs
+        self.kingdom = None
+        self.adaptiveBuyFile = None
         if self.logs:
             if not os.path.exists("games"):
                 os.makedirs("games")
-            
+
     def set_game(self, game):
         self.game = game
+		#knowledge of stacks after game is set
+        if self.adaptive:
+            self.buylist = create_buylist(self)
+            print "Running buylist test"
+            test_initial_buylist(self)
         
     def tell_stacks(self, stacks):
         if self.show_text:
@@ -43,33 +134,7 @@ class BuylistPlayer(player_interface.PlayerInterface):
             
     def tell_start_turn(self):
         if self.run_trials:
-            state = self.game.get_state()
-            winners = {}
-            for i in xrange(100):
-                players = [BuylistPlayer("Player %d"%j, buylist=self.buylist, run_trials=False, show_text=False) for j,p in enumerate(self.game.players)]
-                g = dominion.Game.from_state(state, players, shuffle=True)
-                s0 = g.get_state()
-                
-                winner = g.run()
-                for p in g.players:
-                    if p.name not in winners:
-                        winners[p.name] = 0
-                winners[winner.name] += 1
-                if i == 0 and self.logs:
-                    f = open("games/game_%d.log"%self.n, "w")
-                    self.n += 1
-                    print >>f, "Starting from", state
-                    print >>f, "should be the same:", s0
-                    print >>f, "ending in", g.get_state()
-                    print >>f, "winner", winner.name
-                    print >>f, "Game ended because:", g.end_reason
-                    print >>f, "buylist was", self.buylist
-                    f.close()
-            winsum = sum(winners.values())
-            for w in winners:
-                if w not in self.stats:
-                    self.stats[w] = []
-                self.stats[w].append(winners[w]*100.0/winsum)
+            run_trials(self, 10)
         if self.show_text:
             print self.name + ", it's your turn!"
 
