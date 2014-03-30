@@ -99,6 +99,8 @@ class BuylistPlayer(player_interface.PlayerInterface):
         self.name = name
 		#adaptive overrides using a set buylist, creates one turn by turn
         self.adaptive = adaptive
+        if self.adaptive == "False":
+            self.adaptive = False
         if not adaptive:
             if buylist:
                 self.buylist = map(lambda l: l[:], buylist)
