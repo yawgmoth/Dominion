@@ -28,6 +28,13 @@ class Card(object):
         
     def get_points(self, player):
         return self.points
+        
+    @classmethod
+    def from_state(cls, state):
+        return cls()
+    
+    def get_state(self):
+        return {}
 
 class Copper(Card):
     price = 0

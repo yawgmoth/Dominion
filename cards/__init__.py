@@ -1,13 +1,14 @@
 
 
 from base_game import *
+from seaside import *
 from base import *
 
 import random
 
 all_kingdom_cards = [Cellar, Chapel, Chancellor, Woodcutter, Workshop, Feast, Gardens, Moneylender, 
                      Remodel, ThroneRoom, CouncilRoom, Laboratory, Market, Mine, Adventurer, Village,
-                     Festival, Smithy, Moat, Bureaucrat, Militia, Spy, Thief, Witch, Library]
+                     Festival, Smithy, Moat, Bureaucrat, Militia, Spy, Thief, Witch, Library, Wharf]
 
 random.shuffle(all_kingdom_cards)
                      

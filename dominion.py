@@ -33,9 +33,9 @@ class Player:
         self.actions = 1
         self.buys = 1
         self.money = 0
-        while self.in_play:
-            self.in_play[0].start_turn(self)
-            del self.in_play[0]
+        for c in self.in_play:
+            c.start_turn(self)
+            
         self.player_interface.tell_hand(self.hand)
         self.player_interface.tell_stats(self)
    
@@ -269,8 +269,10 @@ class Game:
         result["stacks"] = stacks
         def cards_to_list(cards):
             return map(lambda c: c.name, cards)
+        def cards_to_list_state(cards):
+            return map(lambda c: {"name": c.name, "state": c.get_state()}, cards)
         for p in self.players:
-            players.append({"name": p.name, "deck": cards_to_list(p.deck), "hand": cards_to_list(p.hand), "discard_pile": cards_to_list(p.discard_pile), "in_play": cards_to_list(p.in_play)})
+            players.append({"name": p.name, "deck": cards_to_list(p.deck), "hand": cards_to_list(p.hand), "discard_pile": cards_to_list(p.discard_pile), "in_play": cards_to_list_state(p.in_play)})
         result["players"] = players
         return json.dumps(result, indent=4)
     
@@ -287,6 +289,7 @@ class Game:
             players.append( Player(map(cards.card_by_name, pstate["deck"]), ai, pstate["name"]))
             players[-1].discard_pile = map(cards.card_by_name, pstate["discard_pile"])
             players[-1].hand = map(cards.card_by_name, pstate["hand"])
+            players[-1].in_play = map(lambda c: cards.type_by_name(c["name"]).from_state(c["state"]), pstate["in_play"])
             if shuffle:
                 random.shuffle(players[-1].deck)
         result = Game(players)
