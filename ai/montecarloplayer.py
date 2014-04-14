@@ -172,7 +172,7 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
         
 
 class MonteCarloPlayer(player_interface.PlayerInterface):
-    def __init__(self, name, trials=500, write_stats=True):
+    def __init__(self, name, trials=500, write_stats=False):
         self.name = name
         self.hand = []
         self.last_played = ""

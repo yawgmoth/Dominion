@@ -55,35 +55,46 @@ class ExpensiveCardPlayer(player_interface.PlayerInterface):
         return random.randint(0,len(choices)-1)
     
     def ask_whichaction(self, actions):
-        actions = actions[:]
-        random.shuffle(actions)
+        actions_shuffled = actions[:]
+        random.shuffle(actions_shuffled)
         maxcost = 0
         choice = -1
-        for i, a in enumerate(actions):
+        for i, a in enumerate(actions_shuffled):
             if a.price > maxcost:
                 maxcost = a.price
-                choice = i
-        return choice
+                choice = a.name
+        for i,a in enumerate(actions):
+            if a.name == choice:
+                return i
+        return -1
         
     def ask_whichbuy(self, options):
         maxcost = 0
         choice = -1
-        options = options[:]
-        random.shuffle(options)
-        for i, o in enumerate(options):
+        options_shuffled = options[:] 
+        random.shuffle(options_shuffled)
+        for i, o in enumerate(options_shuffled):
             if o.type.price > maxcost:
                 maxcost = o.type.price
-                choice = i
-        return choice
+                choice = o.type.name
+        for i,o in enumerate(options):
+            if o.type.name == choice:
+                return i
+        return -1
         
     def ask_whichgain(self, options):
         maxcost = 0
         choice = -1
-        
-        for i, o in enumerate(options):
+        choice = -1
+        options_shuffled = options[:] 
+        random.shuffle(options_shuffled)
+        for i, o in enumerate(options_shuffled):
             if o.type.price > maxcost:
                 maxcost = o.type.price
-                choice = i
+                choice = o.type.name
+        for i,o in enumerate(options):
+            if o.type.name == choice:
+                return i
         return choice
         
     def ask_whichdiscard(self, cards, optional):
