@@ -130,14 +130,40 @@ class ThroneRoom(Card):
     price = 4
     type = ACTION
     name = "Throne Room"
+    def __init__(self):
+        self.choosing = False
+        
     def play(self, player):
+        self.choosing = True
         a = player.choose_action()
+        self.choosing = False
         if a:
             del player.hand[player.hand.index(a)]
             player.in_play.append(a)
             a.play(player)
             a.play(player)
             a.post_play(player)
+
+    # must be idempotent
+    def start_turn(self, player):
+        if self.choosing:
+            a = player.choose_action()
+            self.choosing = False
+            if a:
+                del player.hand[player.hand.index(a)]
+                player.in_play.append(a)
+                a.play(player)
+                a.play(player)
+                a.post_play(player)
+
+    @classmethod
+    def from_state(cls, state):
+        result = cls()
+        result.choosing = state["choosing"]
+        return result
+    
+    def get_state(self):
+        return {"choosing": self.choosing}
         
 class CouncilRoom(Card):
     price = 5

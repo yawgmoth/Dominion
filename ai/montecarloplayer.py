@@ -185,6 +185,9 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
             f = file("stats.log", "a+")
             f.close()
         self.hand = []
+        self.actions = 0
+        self.buys = 0
+        self.money = 0
         
     def tell_stacks(self, stacks):
         print "Available stacks this game:"
@@ -217,6 +220,9 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         print " ", player.actions, "Actions"
         print " ", player.buys, "Buys"
         print " ", player.money, "Money"
+        self.actions = player.actions
+        self.buys = player.buys
+        self.money = player.money
         
     def tell_buyphase(self):
         print "Buyphase!"
@@ -282,9 +288,12 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         
         stat_groups = {}
         for s in stats:
-            if s[0] not in stat_groups:
-                stat_groups[s[0]] = []
-            stat_groups[s[0]].append(stats[s])
+            act = None
+            if s:
+                act = s[0] 
+            if act not in stat_groups:
+                stat_groups[act] = []
+            stat_groups[act].append(stats[s])
             
         stat_group_values = {}
         for s in stat_groups:
@@ -292,8 +301,8 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
             total = sum(map(lambda (v,c): c, stat_groups[s]))
             stat_group_values[s] = sum(map(lambda (v,c): v*c/total, stat_groups[s]))
         
-                
-        
+        best = stat_group_values[stat_group_values.keys()[0]]
+        bestat = stat_group_values.keys()[0]
         for s in stat_group_values:
             if stat_group_values[s] > best:
                 best = stat_group_values[s]
@@ -304,7 +313,10 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
            f = file("stats.log", "a+")
            print >>f, "needed", dt
            print >>f, "Hand:", map(lambda a: a.name, self.hand)
+           print >>f, "money:", self.money, "buys:", self.buys, "actions:", self.actions
            print >>f, "stats:", stats
+           print >>f, "stat groups:", stat_groups
+           print >>f, "stat group values:", stat_group_values
            print >>f, "\nplan:", bestat
            print >>f, "\n\n"
            f.close()
@@ -316,14 +328,6 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         if next not in map(lambda a: a.name, actions):
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
-            players = []
-            for j in xrange(len(self.game.players)):
-                if i == self.game.active_player:
-                    players.append(MonteCarloTrialPlayer("Player %d"%j, stats=stats))
-                else:
-                    players.append(MonteCarloTrialPlayer("Player %d"%j, stats={}))
-            g = dominion.Game.from_state(state, players, shuffle=True)
-            g.run(limit=1)
             import pdb
             pdb.set_trace()
         return map(lambda a: a.name, actions).index(next)
