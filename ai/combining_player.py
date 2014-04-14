@@ -92,7 +92,8 @@ class CombiningPlayer(player_interface.PlayerInterface):
         self.buy.tell_attack(attacker, card)
         
     def tell_winner(self, winner, *args):
-        print winner, "has won the game!"
+        self.play.tell_winner(winner, *args)
+        self.buy.tell_winner(winner, *args)
     
     def get_name(self):
         return self.name

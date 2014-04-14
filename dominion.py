@@ -299,17 +299,17 @@ class Game:
         return result
         
 
-    def run(self):
+    def run(self, limit=1000, fill_hand=True):
         for p in self.players:
             p.tell_stacks(self.stacks)
         
         for p in self.players:
-            if len(p.hand) < 5:
+            if len(p.hand) < 5 and fill_hand:
                 p.reshuffle()
                 for i in xrange(5):
                     p.draw_card()
         n = 0
-        while not self.check_game_end() and n < 1000:
+        while not self.check_game_end() and n < limit:
             p = self.players[self.active_player]
             p.start_turn()
             want_play = True
@@ -329,8 +329,8 @@ class Game:
                 f.write(self.get_state())
                 f.close()
         
-        if n == 1000:
-            print >> sys.stderr, "game lasted for 1000 turns, probably not going to end"
+        if n == limit:
+            print >> sys.stderr, "game lasted for %d turns, probably not going to end"%(limit)
             self.end_reason = "timeout"
         for p in self.players:
             p.calculate_points()
@@ -381,6 +381,9 @@ def make_player(type, nr, opts, interface_only=False):
     elif type == "ai.heuristic":
         import ai
         interface = ai.HeuristicPlayer("Player %d"%nr, **opts)
+    elif type == "ai.montecarlo":
+        import ai
+        interface = ai.MonteCarloPlayer("Player %d"%nr, **opts)
     elif type == "ai.combining":
         import ai
         interface = ai.CombiningPlayer("Player %d"%nr, **opts)
@@ -401,7 +404,7 @@ def filecontent(fname):
 
 def main():
     parser = optparse.OptionParser()
-    playertypes = ["basic", "ai.random", "gtk", "ai.counting", "ai.expensive", "ai.buylist", "ai.heuristic", "ai.combining"]
+    playertypes = ["basic", "ai.random", "gtk", "ai.counting", "ai.expensive", "ai.buylist", "ai.heuristic", "ai.combining", "ai.montecarlo"]
     parser.add_option("-1", "--player-1", "--p1", action="store", type="choice", choices=playertypes, default="ai.random", dest="player1")
     parser.add_option("-2", "--player-2", "--p2", action="store", type="choice", choices=playertypes, default="ai.random", dest="player2")
     parser.add_option("-3", "--player-3", "--p3", action="store", type="choice", choices=playertypes, default=None, dest="player3")
