@@ -14,6 +14,9 @@ class Player:
         self.in_play = []
         self.player_interface = player_interface
         self.name = name
+        self.actions = 1
+        self.buys = 1
+        self.money = 0
         self.reset_stats = True
         
     def get_other_players(self):
