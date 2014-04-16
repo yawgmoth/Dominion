@@ -2,6 +2,7 @@ import random
 import player_interface
 import dominion
 import os
+import cards
 
 def load_buylist(fname):
     f = open(fname)
@@ -12,16 +13,38 @@ def load_buylist(fname):
             buylist.append([item,int(count)])
     f.close()
     return buylist
-	
+
+def sortByCost(kingdom, i):
+    print(kingdom)
+    highestCost=0
+    highestCostCard=i
+    for x in xrange(i,10):
+        if cards.cost_by_name(kingdom[x])	>= highestCost:
+            highestCost = cards.cost_by_name(kingdom[x])
+            highestCostCard=x
+    highCard = kingdom.pop(highestCostCard)
+    kingdom.insert(i,highCard)	
+    i=i+1
+    if(i<9):
+        sortByCost(kingdom,i)
+ #   if(i==9):
+ #       print(kingdom)
+    return kingdom
+		
 def create_buylist(self):
     kingdom = get_kingdoms(self)
-	#remove copper, silver, gold, and province- already accounted for in template strategy
+	#remove copper, silver, gold, curse, and province- already accounted for in template strategy
     del kingdom[0]
     del kingdom[0]
     del kingdom[0]
-    del kingdom[3]
+    del kingdom[0]
+    del kingdom[2]
     self.kingdom = kingdom
+#  random kingdom placement
     random.shuffle(kingdom);
+# initial buylist based on cost
+#    sortByCost(kingdom,0)
+
     self.adaptiveBuyFile = "adaptiveBuylist.buys"
 	#just random for now
     target = open (self.adaptiveBuyFile, 'w')
@@ -82,20 +105,20 @@ def run_trials(self, trials):
 		
 def test_initial_buylist(self):
     result = 0
-    result= run_trials(self, 10)
-    if(result > 50.0):
+    result= run_trials(self, 20)
+    if(result > 51.0):
         print "Buylist wins over 50% to start"
     else:
         i=1
-        while result < 50.0:
+        while result < 51.0:
             create_buylist(self)
-            result = run_trials(self,10)
+            result = run_trials(self,20)
             i+=1
         print "Took %d iterations to get a win with result %d" % (i, result)
         
 
 class BuylistPlayer(player_interface.PlayerInterface):
-    def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=True, show_text=False, graph=False, logs=False, adaptive=True):
+    def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=False, show_text=False, graph=False, logs=False, adaptive=False):
         self.name = name
 		#adaptive overrides using a set buylist, creates one turn by turn
         self.adaptive = adaptive

@@ -1,3 +1,0 @@
-1000 runs done in 59674.402 seconds
-Player 2 won 486 ( = 48.600%)
-Player 1 won 514 ( = 51.400%)

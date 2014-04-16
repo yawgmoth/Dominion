@@ -29,3 +29,8 @@ def type_by_name(name):
     for c in all_kingdom_cards + [Gold, Silver, Copper, Curse, Estate, Duchy, Province]:
         if name == c.name: return c
     return None
+
+def cost_by_name(name):
+    for c in all_kingdom_cards + [Gold, Silver, Copper, Curse, Estate, Duchy, Province]:
+        if name == c.name: return c.price
+    return None
