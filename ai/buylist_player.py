@@ -3,6 +3,7 @@ import player_interface
 import dominion
 import os
 import cards
+from copy import deepcopy
 
 def load_buylist(fname):
     f = open(fname)
@@ -27,8 +28,6 @@ def sortByCost(kingdom, i):
     i=i+1
     if(i<9):
         sortByCost(kingdom,i)
- #   if(i==9):
- #       print(kingdom)
     return kingdom
 		
 def create_buylist(self):
@@ -41,26 +40,27 @@ def create_buylist(self):
     del kingdom[2]
     self.kingdom = kingdom
 #  random kingdom placement
-    random.shuffle(kingdom);
+#    random.shuffle(kingdom);
 # initial buylist based on cost
-#    sortByCost(kingdom,0)
+    sortByCost(kingdom,0)
 
     self.adaptiveBuyFile = "adaptiveBuylist.buys"
 	#just random for now
     target = open (self.adaptiveBuyFile, 'w')
-    target.write("%s %d\n" % (kingdom[0], 3))
+    target.write("%s %d\n" % (kingdom[0], 1))
     target.write("Province 99\n")
     target.write("Gold 99\n")
-    target.write("%s %d\n" % (kingdom[1], 3))
-    target.write("%s %d\n" % (kingdom[2], 3))
-    target.write("%s %d\n" % (kingdom[3], 3))	
-    target.write("%s %d\n" % (kingdom[4], 3))
-    target.write("%s %d\n" % (kingdom[5], 3))	
+    target.write("%s %d\n" % (kingdom[1], 1))
+    target.write("%s %d\n" % (kingdom[2], 1))
+    target.write("%s %d\n" % (kingdom[3], 1))	
+    target.write("%s %d\n" % (kingdom[4], 1))
+    target.write("%s %d\n" % (kingdom[5], 1))	
     target.write("Silver 99\n")	
-    target.write("%s %d\n" % (kingdom[6], 3))
-    target.write("%s %d\n" % (kingdom[7], 3))
-    target.write("%s %d\n" % (kingdom[8], 3))
-    target.write("%s %d" % (kingdom[9], 3))	
+    target.write("%s %d\n" % (kingdom[6], 1))
+    target.write("%s %d\n" % (kingdom[7], 1))
+    target.write("%s %d\n" % (kingdom[8], 1))
+    target.write("%s %d" % (kingdom[9], 
+	1))	
     target.close()
     return load_buylist(self.adaptiveBuyFile)   
 	
@@ -69,6 +69,36 @@ def get_kingdoms(self):
     for s in self.game.stacks:
         kingdom.append(s.type.name)
     return kingdom
+	
+def adapt_turn(self):
+#does nothing for now
+    result = 0
+    result= run_trials(self, 20)
+    if(result > 75.0):
+        f = open("test.log", "a")
+        print >>f, "We had a good turn"
+        f.close()
+    if(result< 75.0 and result >51.0):
+        hill_climb_card_amts(self, result,self.adaptCard)
+        #hill_climb_card_rank(self, result,self.adaptCard)		
+    else:
+        #refine the buylist
+        f = open("test.log", "a")
+        print >>f, "We had a bad turn"
+        f.close()
+        #hill_climb_card_amts(self, result,self.adaptCard)
+        hill_climb_card_rank(self, result,self.adaptCard)
+        self.adaptCard = increase_adaptCard(self.adaptCard)
+
+def increase_adaptCard(adaptCard):
+    adaptCard=adaptCard+1
+    if(adaptCard==1):
+        adaptCard=3
+    if(adaptCard==2 or adaptCard==8):
+        adaptCard=adaptCard+1
+    if(adaptCard==13):
+        adaptCard=0
+    return adaptCard      
 
 def run_trials(self, trials):
         state = self.game.get_state()
@@ -104,24 +134,69 @@ def run_trials(self, trials):
         return finalstat
 		
 def test_initial_buylist(self):
+    f = open("test.log", "w")
     result = 0
     result= run_trials(self, 20)
     if(result > 51.0):
-        print "Buylist wins over 50% to start"
+        print >>f, "Buylist wins over 50%"
+        f.close()
     else:
         i=1
         while result < 51.0:
             create_buylist(self)
             result = run_trials(self,20)
             i+=1
-        print "Took %d iterations to get a win with result %d" % (i, result)
-        
+        print >>f, "Took %d iterations to get a win with result %d" % (i, result)
+        f.close()
+		
+def hill_climb_card_amts(self, result,loc):
+    bestResult = result
+    originalBuyList = deepcopy(self.buylist)
+	#just climbing based on amount to start
+    trialresult = 0
+    buyvalue=0
+    for x in range(0,5):
+        self.buylist[loc][1]= self.buylist[loc][1]+1
+        trialresult = run_trials(self,10)
+        if(trialresult > bestResult):
+            bestResult = trialresult
+            buyvalue = self.buylist[loc][1]
+    if(bestResult < result):
+        self.buylist = originalBuyList
+    else:
+        self.buylist[loc][1]=buyvalue
+        hill_climb_card_rank(self, result,loc)
+
+def hill_climb_card_rank(self,result,loc):
+    bestResult = result
+    originalBuyList = deepcopy(self.buylist)
+	#climb based on rank
+    trialresult = 0
+    bestcardloc = -1
+    currentLoc=loc
+    #test other cards at this location
+    for x in range(0,10):
+        temp= deepcopy(self.buylist[loc])
+        currentLoc=increase_adaptCard(currentLoc)
+        self.buylist[loc]=deepcopy(self.buylist[currentLoc])
+        self.buylist[currentLoc]=temp
+        trialresult = run_trials(self,10)
+        if(trialresult > bestResult):
+            bestResult = trialresult
+            bestcardloc=currentLoc
+        self.buylist=originalBuyList			
+    if(bestResult < result):
+        self.buylist = originalBuyList
+    else:
+        self.buylist[loc]=deepcopy(self.buylist[bestcardloc])
+        #hill_climb_card_amts(self, result,loc)
 
 class BuylistPlayer(player_interface.PlayerInterface):
     def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=False, show_text=False, graph=False, logs=False, adaptive=False):
         self.name = name
 		#adaptive overrides using a set buylist, creates one turn by turn
         self.adaptive = adaptive
+        self.adaptCard=0
         if self.adaptive == "False":
             self.adaptive = False
         if not adaptive:
@@ -160,6 +235,8 @@ class BuylistPlayer(player_interface.PlayerInterface):
     def tell_start_turn(self):
         if self.run_trials:
             run_trials(self, 10)
+        if self.adaptive:
+            adapt_turn(self)
         if self.show_text:
             print self.name + ", it's your turn!"
 
