@@ -58,7 +58,12 @@ class CombiningPlayer(player_interface.PlayerInterface):
         return self.play.ask_which(choices, message)
     
     def ask_whichaction(self, actions):
-        return self.play.ask_whichaction(actions)
+        result = self.play.ask_whichaction(actions)
+        if result < 0: 
+            print "no play"
+        else:
+            print actions[result].name
+        return result
         
     def ask_whichbuy(self, options):
         return self.buy.ask_whichbuy(options)

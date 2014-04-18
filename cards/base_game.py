@@ -342,6 +342,8 @@ class Thief(Card):
     price = 4
     type = ACTION | ATTACK
     name = "Thief"
+    def __init__(self):
+        self.n = 0
     def play(self, player):
         for p in player.get_other_players():
             if p.attack(player, self):
@@ -368,7 +370,8 @@ class Thief(Card):
                             player.game.trash.append(treasures[which])
                         del treasures[which]
                     p.discard_pile.extend(treasures)
-                        
+
+
 class Witch(Card):
     price = 5
     type = ACTION | ATTACK

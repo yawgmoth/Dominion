@@ -5,12 +5,60 @@ import dominion
 from cStringIO import StringIO
 import sys
 
+class DummyCard:
+    def __init__(self, name):
+        self.name = name
+        
+# how to value unknown branches of the tree (high = higher probability of choosing them)
+EXPLORATION_RATE = 1000
+
+# king croesus, the wealthy: maximize money output
+def croesus(player):
+    return player.money
+    
+# king midas: turn everything into "gold": maximize average cost of card in deck
+def midas(player):
+    g = player.game
+    pl = None
+    for p in g.players:
+        if p.player_interface.get_name() == player.get_name():
+            pl = p
+
+    value = sum(map(lambda c: c.price, pl.hand + pl.in_play + pl.deck + pl.discard_pile)) + player.money
+    return value/(1.0 + len(pl.hand + pl.in_play + pl.deck + pl.discard_pile))
+    
+# god of intellect: maximize cards drawn+played
+def coeus(player):
+    g = player.game
+    pl = None
+    for p in g.players:
+        if p.player_interface.get_name() == player.get_name():
+            pl = p
+    return len(pl.hand + pl.in_play)
+    
+# god of war, bloodshed and violence: maximize attacks played
+def ares(player):
+    import cards.base
+    g = player.game
+    pl = None
+    for p in g.players:
+        if p.player_interface.get_name() == player.get_name():
+            pl = p
+    c = 0
+    for c in pl.in_play:
+        if c.type & cards.base.ATTACK:
+            c += 1
+    return c
+    
+personality_map = {"midas": midas, "croesus": croesus, "coeus": coeus, "ares": ares}
+
 class MonteCarloTrialPlayer(player_interface.PlayerInterface):
-    def __init__(self, name, stats):
+    def __init__(self, name, stats, personality=croesus):
         self.name = name
         self.stats = stats
         self.current_play = ()
         self.buyphase = False
+        self.personality = personality
         
     def tell_stacks(self, stacks):
         pass
@@ -35,8 +83,7 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
             self.buyphase =  False
             
     def value(self):
-        # TODO: take buylist into account
-        return self.money
+        return self.personality(self)
         
     def tell_buyphase(self):
         self.buyphase = True
@@ -61,6 +108,69 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
             for i, c in enumerate(choices):
                 print " ", i+1, c
         return random.randint(0,len(choices)-1)
+    
+
+    
+    def monte_carlo_decision(self, actions, optional=False):
+        matches = []
+        
+        noplayvalue = (0.0,0.0)
+        for s in self.stats:
+            match = True
+            for i, a in enumerate(self.current_play):
+                if i >= len(s) or s[i] != a:
+                    match = False
+            if len(s) > len(self.current_play) and s[len(self.current_play)] not in map(lambda a: a.name, actions):
+                match = False
+            if len(s) == len(self.current_play):
+                v,c = noplayvalue
+                noplayvalue = ((v*c + self.stats[s][0]*self.stats[s][1])/(c + self.stats[s][1]),(c + self.stats[s][1]))
+                match = False
+            if match:
+                matches.append((s,self.stats[s]))
+        opts = map(lambda a: a.name, actions)
+        additional_options = []
+        for o in opts:
+            found = False
+            for m,v in matches:
+                if len(m) > len(self.current_play) and m[len(self.current_play)] == o:
+                    found = True
+            if not found:
+                additional_options.append((self.current_play + (o,),(EXPLORATION_RATE,1)))
+        matches.extend(additional_options)
+        
+        match_groups = {}
+        for m,(mv,mc) in matches:
+            seq = tuple(m[:len(self.current_play)+1])
+            if seq not in match_groups:
+                match_groups[seq] = (0,0)
+            v,count = match_groups[seq]
+            match_groups[seq] = ((v*count + mv*mc)/(count+mc),count+mc)
+        if noplayvalue[0] == 0:
+            noplayvalue = (EXPLORATION_RATE,1)
+        if optional:
+            matches = [([""], noplayvalue[0])]
+        else:
+            matches = []
+        for m in match_groups:
+            matches.append((m,match_groups[m][0]))
+        
+        def roulette_wheel(itemvalues):
+            total = sum(itemvalues)
+            r = random.random()*total
+            at = 0.0
+            i = 0
+            while at <= r:
+                at += itemvalues[i]
+                i += 1
+            return i-1        
+        i = roulette_wheel(map(lambda (m,v): v, matches))
+        if not matches[i][0][-1] and optional:
+            self.current_play = self.current_play + ("",)
+            return -1
+        m = matches[i][0][-1]
+        self.current_play = self.current_play + (m,)
+        return map(lambda a: a.name, actions).index(m)
     
     def ask_whichaction(self, actions):
         matches = []
@@ -87,7 +197,7 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
                 if len(m) > len(self.current_play) and m[len(self.current_play)] == o:
                     found = True
             if not found:
-                additional_options.append((self.current_play + (o,),(1,1)))
+                additional_options.append((self.current_play + (o,),(EXPLORATION_RATE,1)))
         matches.extend(additional_options)
         
         match_groups = {}
@@ -98,7 +208,7 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
             v,count = match_groups[seq]
             match_groups[seq] = ((v*count + mv*mc)/(count+mc),count+mc)
         if noplayvalue[0] == 0:
-            noplayvalue = (1,1)
+            noplayvalue = (EXPLORATION_RATE,1)
         matches = [(None, noplayvalue[0])]
         for m in match_groups:
             matches.append((m,match_groups[m][0]))
@@ -114,15 +224,11 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
             return i-1        
         i = roulette_wheel(map(lambda (m,v): v, matches))
         if matches[i][0] is None:
-            print "I'm done playing actions"
             return -1
         m = matches[i][0][-1]
         self.current_play = self.current_play + (m,)
-        print "after careful consideration I have concluded that the best course of action is", m
         return map(lambda a: a.name, actions).index(m)
         
-        
-        # TODO
         
     def ask_whichbuy(self, options):
         return -1
@@ -132,34 +238,25 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
         return result
         
     def ask_whichdiscard(self, cards, optional):
-        if optional:
-            return -1
-        
-        return 0
-        # TODO
-        
+        return self.monte_carlo_decision(cards, optional)
+
     def ask_whichreaction(self, cards):
         return self.ask_which(cards)
         
     def ask_whichtrash(self, cards, optional, *args):
-        if optional:
-            return -1
-        # TODO
-        return 0
+        return self.monte_carlo_decision(cards, optional)
         
     def ask_putdiscard(self):
-        return self.ask_yesno()
+        return self.monte_carlo_decision([DummyCard("yes"), DummyCard("no")]) == 0
         
     def ask_whichvictorycard(self, options, cause):
         return self.ask_which(options)
         
-    def ask_keep(self, player, card):
-        # TODO
-        return self.ask_yesno()
+    def ask_keep(self, player, card):        
+        return self.monte_carlo_decision([DummyCard("yes"), DummyCard("no")]) == 0
         
     def ask_wantgain(self, card):
-        # TODO
-        return self.ask_yesno()
+        return self.monte_carlo_decision([DummyCard("yes"), DummyCard("no")]) == 0
 
     def tell_attack(self, attacker, card):
         pass
@@ -170,9 +267,12 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
     def get_name(self):
         return self.name
         
+    def set_game(self, game):
+        self.game = game
+        
 
 class MonteCarloPlayer(player_interface.PlayerInterface):
-    def __init__(self, name, trials=500, write_stats=False):
+    def __init__(self, name, trials=500, write_stats=False, personality="croesus"):
         self.name = name
         self.hand = []
         self.last_played = ""
@@ -188,6 +288,10 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         self.actions = 0
         self.buys = 0
         self.money = 0
+        self.personality = personality
+        
+    def set_game(self, game):
+        self.game = game
         
     def tell_stacks(self, stacks):
         print "Available stacks this game:"
@@ -252,7 +356,27 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
     def set_game(self, game):
         self.game = game
     
-    def ask_whichaction(self, actions):            
+    def ask_whichaction(self, actions):
+        return self.monte_carlo_decision(actions)
+    
+    def monte_carlo_decision(self, actions, use_plan=False):
+        if use_plan and self.plan:
+            if self.write_stats:
+                f = file("stats.log", "a+")
+                print >>f, "use plan", self.plan
+                print >>f, "choose from:", map(lambda a: a.name, actions)
+                f.close()
+            if self.plan and not self.plan[0]:
+                self.plan = self.plan[1:]
+                return -1
+            for i,a in enumerate(actions):
+                if a.name == self.plan[0]:
+                    self.plan = self.plan[1:]
+                    return i
+            return random.randint(-1,len(actions)-1)
+        elif use_plan:
+            return -1
+
         state = self.game.get_state()
         stats = {}
         stdout = sys.stdout
@@ -260,16 +384,16 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         import time
         t0 = time.time()
         try:
-            
+
             for i in xrange(self.trials):
                 sys.stdout = StringIO()
                 sys.stderr = StringIO()
                 players = []
                 for j in xrange(len(self.game.players)):
                     if j == self.game.active_player:
-                        players.append(MonteCarloTrialPlayer("Player %d"%j, stats=stats))
+                        players.append(MonteCarloTrialPlayer("Player %d"%j, stats=stats, personality=personality_map[self.personality]))
                     else:
-                        players.append(MonteCarloTrialPlayer("Player %d"%j, stats={}))
+                        players.append(MonteCarloTrialPlayer("Player %d"%j, stats={}, personality=personality_map[self.personality]))
                 g = dominion.Game.from_state(state, players, shuffle=True)
                 g.run(limit=1, fill_hand=False)
                 
@@ -307,7 +431,18 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
             if stat_group_values[s] > best:
                 best = stat_group_values[s]
                 bestat = s
-                        
+
+        bestplan = -100
+        bestplanat = (bestat,)
+
+        for s in stats:
+            if stats[s][0] > bestplan and s and s[0] == bestat:
+                bestplan = best
+                bestplanat = s
+
+        self.plan = []
+        if bestplanat and bestat:
+            self.plan = bestplanat[1:]
 
         if self.write_stats:
            f = file("stats.log", "a+")
@@ -317,7 +452,8 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
            print >>f, "stats:", stats
            print >>f, "stat groups:", stat_groups
            print >>f, "stat group values:", stat_group_values
-           print >>f, "\nplan:", bestat
+           print >>f, "\naction:", bestat
+           print >>f, "plan:", self.plan, bestplanat
            print >>f, "\n\n"
            f.close()
         
@@ -345,50 +481,25 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         return result
         
     def ask_whichdiscard(self, cards, optional):
-        for p in self.playlist["trash"]:
-            if p in cards:
-                return cards.index(p)
-        if optional:
-            return -1
-        for p in reversed(self.playlist["play"]):
-            if p["card"] in cards:
-                return cards.index(p["card"])
-        return 0
-    
-        options = cards
-        if optional:
-            options = ["Do nothing"] + options
-        return self.ask_which(options)
+        return self.monte_carlo_decision(cards, use_plan=True)
         
     def ask_whichreaction(self, cards):
         return self.ask_which(cards)
         
     def ask_whichtrash(self, cards, optional, *args):
-        for p in self.playlist["trash"]:
-            if p in map(lambda c: c.name, cards):
-                return cards.index(p)
-        if optional:
-            return -1
-        for p in reversed(self.playlist["play"]):
-            if p["card"] in map(lambda c: c.name, cards):
-                return cards.index(p["card"])
-        return 0
+        return self.monte_carlo_decision(cards, use_plan=True)
         
     def ask_putdiscard(self):
-        return self.ask_yesno()
+        return self.monte_carlo_decision([DummyCard("yes"), DummyCard("no")], use_plan=True) == 0
         
     def ask_whichvictorycard(self, options, cause):
         return self.ask_which(options)
         
     def ask_keep(self, player, card):
-        #import pdb
-        #pdb.set_trace()
-        return self.ask_yesno()
+        return self.monte_carlo_decision([DummyCard("yes"), DummyCard("no")], use_plan=True) == 0
         
     def ask_wantgain(self, card):
-        if self.last_played in self.playlist and "gain" in self.playlist[self.last_played]:
-            return card.name in self.playlist[self.last_played]["gain"]
-        return self.ask_yesno()
+        return self.monte_carlo_decision([DummyCard("yes"), DummyCard("no")], use_plan=True) == 0
 
     def tell_attack(self, attacker, card):
         pass
