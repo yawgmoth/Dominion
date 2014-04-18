@@ -73,11 +73,14 @@ def get_kingdoms(self):
 def adapt_turn(self):
 #does nothing for now
     result = 0
-    result= run_trials(self, 10)
+    result= run_trials(self, 20)
     if(result > 75.0):
         f = open("test.log", "a")
         print >>f, "We had a good turn"
         f.close()
+    if(result< 75.0 and result >51.0):
+        hill_climb_card_amts(self, result,self.adaptCard)
+        #hill_climb_card_rank(self, result,self.adaptCard)		
     else:
         #refine the buylist
         f = open("test.log", "a")
@@ -152,21 +155,17 @@ def hill_climb_card_amts(self, result,loc):
 	#just climbing based on amount to start
     trialresult = 0
     buyvalue=0
-    f = open("test.log", "a")
-    print >>f, "Self buylist first value %d and card loc is %d" % (self.buylist[loc][1],loc)
     for x in range(0,5):
         self.buylist[loc][1]= self.buylist[loc][1]+1
         trialresult = run_trials(self,10)
         if(trialresult > bestResult):
             bestResult = trialresult
             buyvalue = self.buylist[loc][1]
-    print >>f, "Old success %f, new is %f" % (result,trialresult)
     if(bestResult < result):
         self.buylist = originalBuyList
     else:
         self.buylist[loc][1]=buyvalue
-    print >>f, "Old buylist first value %d" % self.buylist[loc][1]
-    f.close()
+        hill_climb_card_rank(self, result,loc)
 
 def hill_climb_card_rank(self,result,loc):
     bestResult = result
@@ -190,6 +189,7 @@ def hill_climb_card_rank(self,result,loc):
         self.buylist = originalBuyList
     else:
         self.buylist[loc]=deepcopy(self.buylist[bestcardloc])
+        #hill_climb_card_amts(self, result,loc)
 
 class BuylistPlayer(player_interface.PlayerInterface):
     def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=False, show_text=False, graph=False, logs=False, adaptive=False):
