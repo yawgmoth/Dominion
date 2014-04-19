@@ -8,7 +8,7 @@ import random
 
 all_kingdom_cards = [Cellar, Chapel, Chancellor, Woodcutter, Workshop, Feast, Gardens, Moneylender, 
                      Remodel, ThroneRoom, CouncilRoom, Laboratory, Market, Mine, Adventurer, Village,
-                     Festival, Smithy, Moat, Bureaucrat, Militia, Spy, Thief, Witch, Library, Wharf]
+                     Festival, Smithy, Moat, Bureaucrat, Militia, Spy, Thief, Witch, Library, Wharf, DGRC]
 
 random.shuffle(all_kingdom_cards)
                      

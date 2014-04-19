@@ -373,11 +373,13 @@ class Game:
 def make_start_deck():
     return [cards.Copper() for i in xrange(7)] + [cards.Estate() for i in xrange(3)]
     
-def make_player(type, nr, opts, interface_only=False):
+def make_player(type, nr, opts, interface_only=False, optdict=None):
     if opts:
         opts = dict(map(lambda o: o.split("=", 1), opts.split(",")))
     else:
         opts = {}
+    if optdict is not None:
+        opts = optdict
     
     if type == "basic":
         interface = PlayerInterface("Player %d"%nr)

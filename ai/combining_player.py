@@ -4,15 +4,17 @@ import dominion
 import os
 
 class CombiningPlayer(player_interface.PlayerInterface):
-    def __init__(self, name, buy="ai.buylist", play="ai.heuristic", buyopts="", playopts=""):
+    def __init__(self, name, buy="ai.buylist", play="ai.heuristic", buyopts="", playopts="", stats=False, buyopts_dict=None):
         self.name = name
         nr = 10
         try:
             nr = int(self.name.split()[-1])*10
         except Exception: 
             pass
-        self.buy = dominion.make_player(buy, nr + 1, buyopts.replace(";",","), interface_only=True)
+        self.buy = dominion.make_player(buy, nr + 1, buyopts.replace(";",","), interface_only=True, optdict=buyopts_dict)
         self.play = dominion.make_player(play, nr + 2, playopts.replace(";",","), interface_only=True)
+        self.do_stats = stats
+        self.stats = {}
 
     def set_game(self, game):
         self.game = game
@@ -56,23 +58,45 @@ class CombiningPlayer(player_interface.PlayerInterface):
         
     def ask_which(self, choices, message=""):
         return self.play.ask_which(choices, message)
+        
+    def update_stats(self, which, options, result):
+        if self.do_stats:
+            what = "nothing"
+            if which not in self.stats:
+                self.stats[which] = {}
+            if result >= 0:
+                what = options[result]
+            if what not in self.stats[which]:
+                self.stats[which][what] = (0,0)
+            c,t = self.stats[which][what]
+            self.stats[which][what] = (c+1,t)
+            opts = list(set(options + ["nothing"]))
+            for o in opts:
+                if o not in self.stats[which]:
+                    self.stats[which][o] = (0,0)
+                c,t = self.stats[which][o]
+                self.stats[which][o] = (c,t+1)
+            
     
     def ask_whichaction(self, actions):
         result = self.play.ask_whichaction(actions)
-        if result < 0: 
-            print "no play"
-        else:
-            print actions[result].name
+        self.update_stats("action", map(lambda a: a.name, actions), result)
         return result
         
     def ask_whichbuy(self, options):
-        return self.buy.ask_whichbuy(options)
+        result = self.buy.ask_whichbuy(options)
+        self.update_stats("buy", map(lambda o: o.type.name, options), result)
+        return result
 
     def ask_whichgain(self, options):
-        return self.buy.ask_whichgain(options)
+        result = self.buy.ask_whichgain(options)
+        self.update_stats("buy", map(lambda o: o.type.name, options), result)
+        return result
         
     def ask_whichdiscard(self, cards, optional):
-        return self.play.ask_whichdiscard(cards, optional)
+        result = self.play.ask_whichdiscard(cards, optional)
+        self.update_stats("discard", map(lambda c: c.name, cards), result)
+        return result
         
     def ask_whichreaction(self, cards):
         return self.play.ask_whichreaction(cards)
@@ -99,6 +123,12 @@ class CombiningPlayer(player_interface.PlayerInterface):
     def tell_winner(self, winner, *args):
         self.play.tell_winner(winner, *args)
         self.buy.tell_winner(winner, *args)
+        if self.do_stats:
+            for which in self.stats:
+                print "stats for", which
+                for what in self.stats[which]:
+                    c,t = self.stats[which][what]
+                    print "\t\t%s: %.2f"%(what, (c*1.0/t))
     
     def get_name(self):
         return self.name

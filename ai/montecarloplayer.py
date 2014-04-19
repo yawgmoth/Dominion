@@ -272,11 +272,11 @@ class MonteCarloTrialPlayer(player_interface.PlayerInterface):
         
 
 class MonteCarloPlayer(player_interface.PlayerInterface):
-    def __init__(self, name, trials=500, write_stats=False, personality="croesus"):
+    def __init__(self, name, trials=300, write_stats=False, personality="croesus"):
         self.name = name
         self.hand = []
         self.last_played = ""
-        self.trials = 100
+        self.trials = trials
         self.times = (0,0)
         self.write_stats = write_stats
         if self.write_stats == "False":
@@ -289,6 +289,7 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         self.buys = 0
         self.money = 0
         self.personality = personality
+        self.plan = []
         
     def set_game(self, game):
         self.game = game
@@ -359,7 +360,7 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
     def ask_whichaction(self, actions):
         return self.monte_carlo_decision(actions)
     
-    def monte_carlo_decision(self, actions, use_plan=False):
+    def monte_carlo_decision(self, actions, use_plan=False, optional=True):
         if use_plan and self.plan:
             if self.write_stats:
                 f = file("stats.log", "a+")
@@ -375,7 +376,9 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
                     return i
             return random.randint(-1,len(actions)-1)
         elif use_plan:
-            return -1
+            if optional:
+                return -1
+            return random.randint(0, len(actions))
 
         state = self.game.get_state()
         stats = {}
@@ -481,13 +484,13 @@ class MonteCarloPlayer(player_interface.PlayerInterface):
         return result
         
     def ask_whichdiscard(self, cards, optional):
-        return self.monte_carlo_decision(cards, use_plan=True)
+        return self.monte_carlo_decision(cards, use_plan=True, optional=optional)
         
     def ask_whichreaction(self, cards):
         return self.ask_which(cards)
         
     def ask_whichtrash(self, cards, optional, *args):
-        return self.monte_carlo_decision(cards, use_plan=True)
+        return self.monte_carlo_decision(cards, use_plan=True, optional=optional)
         
     def ask_putdiscard(self):
         return self.monte_carlo_decision([DummyCard("yes"), DummyCard("no")], use_plan=True) == 0

@@ -4,6 +4,9 @@ import dominion
 import os
 import cards
 from copy import deepcopy
+from cStringIO import StringIO
+import sys
+import ai.combining_player
 
 def load_buylist(fname):
     f = open(fname)
@@ -19,48 +22,47 @@ def sortByCost(kingdom, i):
     print(kingdom)
     highestCost=0
     highestCostCard=i
-    for x in xrange(i,10):
+    for x in xrange(i,len(kingdom)):
         if cards.cost_by_name(kingdom[x])	>= highestCost:
             highestCost = cards.cost_by_name(kingdom[x])
             highestCostCard=x
     highCard = kingdom.pop(highestCostCard)
     kingdom.insert(i,highCard)	
     i=i+1
-    if(i<9):
+    if(i<len(kingdom)-1):
         sortByCost(kingdom,i)
     return kingdom
 		
 def create_buylist(self):
     kingdom = get_kingdoms(self)
 	#remove copper, silver, gold, curse, and province- already accounted for in template strategy
+
     del kingdom[0]
     del kingdom[0]
     del kingdom[0]
     del kingdom[0]
     del kingdom[2]
+    
     self.kingdom = kingdom
 #  random kingdom placement
 #    random.shuffle(kingdom);
 # initial buylist based on cost
-    sortByCost(kingdom,0)
+    self.kingdom.sort(key=lambda c: -cards.cost_by_name(c))
+    #sortByCost(kingdom,0)
+    print self.kingdom
 
-    self.adaptiveBuyFile = "adaptiveBuylist.buys"
+    self.adaptiveBuyFile = "adaptiveBuylist.buys" + str(os.getpid())
 	#just random for now
     target = open (self.adaptiveBuyFile, 'w')
-    target.write("%s %d\n" % (kingdom[0], 1))
-    target.write("Province 99\n")
-    target.write("Gold 99\n")
-    target.write("%s %d\n" % (kingdom[1], 1))
-    target.write("%s %d\n" % (kingdom[2], 1))
-    target.write("%s %d\n" % (kingdom[3], 1))	
-    target.write("%s %d\n" % (kingdom[4], 1))
-    target.write("%s %d\n" % (kingdom[5], 1))	
-    target.write("Silver 99\n")	
-    target.write("%s %d\n" % (kingdom[6], 1))
-    target.write("%s %d\n" % (kingdom[7], 1))
-    target.write("%s %d\n" % (kingdom[8], 1))
-    target.write("%s %d" % (kingdom[9], 
-	1))	
+    for i, k in enumerate(self.kingdom):
+        target.write("%s %d\n" % (k, 1))    
+        if i == 0:
+            target.write("Province 99\n")
+            target.write("Gold 99\n")
+        elif i == 5 or (len(kingdom) < 6 and i == len(kingdom)-1):
+            target.write("Silver 99\n")	
+    
+    
     target.close()
     return load_buylist(self.adaptiveBuyFile)   
 	
@@ -88,41 +90,53 @@ def adapt_turn(self):
         f.close()
         #hill_climb_card_amts(self, result,self.adaptCard)
         hill_climb_card_rank(self, result,self.adaptCard)
-        self.adaptCard = increase_adaptCard(self.adaptCard)
+        self.adaptCard = increase_adaptCard(self.adaptCard, len(self.kingdom))
 
-def increase_adaptCard(adaptCard):
+def increase_adaptCard(adaptCard, max):
     adaptCard=adaptCard+1
     if(adaptCard==1):
         adaptCard=3
     if(adaptCard==2 or adaptCard==8):
         adaptCard=adaptCard+1
-    if(adaptCard==13):
+    if(adaptCard>=max):
         adaptCard=0
     return adaptCard      
 
 def run_trials(self, trials):
         state = self.game.get_state()
         winners = {}
-        for i in xrange(trials):
-            players = [BuylistPlayer("Player %d"%j, buylist=self.buylist, run_trials=False, show_text=False, adaptive = False) for j,p in enumerate(self.game.players)]
-            g = dominion.Game.from_state(state, players, shuffle=True)
-            s0 = g.get_state()
+        try:
+            stdout = sys.stdout
+            stderr = sys.stderr
+            sys.stdout = StringIO()
+            sys.stderr = StringIO()
+            for i in xrange(trials):
+                players = [ai.combining_player.CombiningPlayer("Player %d"%j, buy="ai.buylist", play="ai.expensive", buyopts_dict=dict(buylist=self.buylist, run_trials=False, show_text=False, adaptive=False)) for j,p in enumerate(self.game.players)]
+                    
+                g = dominion.Game.from_state(state, players, shuffle=True)
+                s0 = g.get_state()
 
-            winner = g.run()
-            for p in g.players:
-                if p.name not in winners:
-                    winners[p.name] = 0
-            winners[winner.name] += 1
-            if i == 0 and self.logs:
-                f = open("games/game_%d.log"%self.n, "w")
-                self.n += 1
-                print >>f, "Starting from", state
-                print >>f, "should be the same:", s0
-                print >>f, "ending in", g.get_state()
-                print >>f, "winner", winner.name
-                print >>f, "Game ended because:", g.end_reason
-                print >>f, "buylist was", self.buylist
-                f.close()
+                winner = g.run()
+                for p in g.players:
+                    if p.name not in winners:
+                        winners[p.name] = 0
+                winners[winner.name] += 1
+                if i == 0 and self.logs:
+                    f = open("games/game_%d.log"%self.n, "w")
+                    self.n += 1
+                    print >>f, "Starting from", state
+                    print >>f, "should be the same:", s0
+                    print >>f, "ending in", g.get_state()
+                    print >>f, "winner", winner.name
+                    print >>f, "Game ended because:", g.end_reason
+                    print >>f, "buylist was", self.buylist
+                    f.close()
+            sys.stdout = stdout
+            sys.stderr = stderr
+        except Exception:
+            sys.stdout = stdout
+            sys.stderr = stderr
+            raise
         winsum = sum(winners.values())
         finalstat =0
         for w in winners:
@@ -141,12 +155,9 @@ def test_initial_buylist(self):
         print >>f, "Buylist wins over 50%"
         f.close()
     else:
-        i=1
-        while result < 51.0:
-            create_buylist(self)
-            result = run_trials(self,20)
-            i+=1
-        print >>f, "Took %d iterations to get a win with result %d" % (i, result)
+        create_buylist(self)
+        result = run_trials(self,20)
+        print >>f, "Took iterations to get a win with result %d" % (result)
         f.close()
 		
 def hill_climb_card_amts(self, result,loc):
@@ -175,9 +186,9 @@ def hill_climb_card_rank(self,result,loc):
     bestcardloc = -1
     currentLoc=loc
     #test other cards at this location
-    for x in range(0,10):
+    for x in xrange(len(self.kingdom)):
         temp= deepcopy(self.buylist[loc])
-        currentLoc=increase_adaptCard(currentLoc)
+        currentLoc=increase_adaptCard(currentLoc, len(self.buylist))
         self.buylist[loc]=deepcopy(self.buylist[currentLoc])
         self.buylist[currentLoc]=temp
         trialresult = run_trials(self,10)
@@ -190,6 +201,7 @@ def hill_climb_card_rank(self,result,loc):
     else:
         self.buylist[loc]=deepcopy(self.buylist[bestcardloc])
         #hill_climb_card_amts(self, result,loc)
+    print "mutate", self.buylist, "from", originalBuyList
 
 class BuylistPlayer(player_interface.PlayerInterface):
     def __init__(self, name, buylist_file="default.buys", buylist = None, run_trials=False, show_text=False, graph=False, logs=False, adaptive=False):
@@ -233,6 +245,7 @@ class BuylistPlayer(player_interface.PlayerInterface):
                 print s.type.name, " (" + str(s.count) + " available)"
             
     def tell_start_turn(self):
+        print "run trials!"
         if self.run_trials:
             run_trials(self, 10)
         if self.adaptive:
@@ -293,6 +306,7 @@ class BuylistPlayer(player_interface.PlayerInterface):
         return result
         
     def ask_whichbuy(self, options):
+        print "buylist is", self.buylist
         opts = map(lambda x: x.type.name, options)
         for l in self.buylist:
             if l[1] > 0 and l[0] in opts:
